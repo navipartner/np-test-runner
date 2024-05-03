@@ -21,13 +21,13 @@ ModuleVersion = '0.0.1'
 GUID = '57daa51b-9ec3-48bd-8da8-0dd1a671f31e'
 
 # Author of this module
-Author = 'JakubVanak'
+Author = 'Jakub Vanak'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'NaviPartner'
 
 # Copyright statement for this module
-Copyright = '(c) JakubVanak. All rights reserved.'
+Copyright = '(c) NaviPartner. All rights reserved.'
 
 # Description of the functionality provided by this module
 # Description = ''
@@ -55,9 +55,9 @@ Copyright = '(c) JakubVanak. All rights reserved.'
 
 # Assemblies that must be loaded prior to importing this module
 RequiredAssemblies = @(
-    "$PSScriptRoot\..\..\.test-runner\CSLibs\Newtonsoft.Json.dll",
-    "$PSScriptRoot\..\..\.test-runner\CSLibs\System.ServiceModel.Primitives.dll",
-    "$PSScriptRoot\..\..\.test-runner\CSLibs\Microsoft.Dynamics.Framework.UI.Client.dll")
+    "$PSScriptRoot\..\..\..\.test-runner\CSLibs\Newtonsoft.Json.dll",
+    "$PSScriptRoot\..\..\..\.test-runner\CSLibs\System.ServiceModel.Primitives.dll",
+    "$PSScriptRoot\..\..\..\.test-runner\CSLibs\Microsoft.Dynamics.Framework.UI.Client.dll")
 
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
 # ScriptsToProcess = @()
