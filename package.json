@@ -1,31 +1,46 @@
 {
-	"name": "al-test-runner",
-	"displayName": "AL Test Runner",
-	"description": "Test runner for AL tests for Business Central development",
-	"publisher": "jamespearson",
+	"name": "np-al-test-runner",
+	"displayName": "NaviPartner AL Test Runner",
+	"description": "NaviPartner test runner for AL tests for Business Central development",
+	"publisher": "NaviPartner",
 	"bugs": {
-		"email": "james@jpearson.blog",
-		"url": "https://github.com/jimmymcp/al-test-runner/issues"
+		"email": "jakubv@navipartner.dk",
+		"url": "https://github.com/navipartner/np-test-runner/issues"
 	},
-	"homepage": "https://jpearson.blog/al-test-runner-for-visual-studio-code/",
-	"preview": false,
+	"homepage": "https://navipartner.com/",
+	"preview": true,
 	"repository": {
-		"url": "https://github.com/jimmymcp/al-test-runner"
+		"url": "https://github.com/navipartner/np-test-runner"
 	},
-	"icon": "semicolon128.jpg",
+	"icon": "np-al-test-runner-icon.jpg",
 	"files": [
 		"PowerShell/"
 	],
-	"version": "0.10.1",
+	"version": "0.22.0",
 	"engines": {
-		"vscode": ">=1.88.0"
+		"vscode": ">=1.86.0"
 	},
 	"categories": [
 		"Testing"
 	],
+	"keywords": [
+		"AL",
+		"Dynamics 365 Business Central",
+		"Test Runner",
+		"Tests"
+	],
+	"license": "SEE LICENSE IN LICENSE",
+	"galleryBanner": {
+		"color": "#0060A0",
+		"theme": "light"
+	},
+	"pricing": "Free",
 	"activationEvents": [
 		"workspaceContains:.altestrunner",
 		"onLanguage:al"
+	],
+	"extensionDependencies": [
+		"ms-dynamics-smb.al"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -34,7 +49,7 @@
 				{
 					"when": "editorLangId == al",
 					"command": "altestrunner.showTableData",
-					"group": "AL Test Runner"
+					"group": "NP AL Test Runner"
 				}
 			]
 		},
@@ -42,82 +57,82 @@
 			{
 				"command": "altestrunner.runAllTests",
 				"title": "Run All Tests",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.runTestsCodeunit",
 				"title": "Run Tests in Current Codeunit",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.runTest",
 				"title": "Run Current Test",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.debugTest",
 				"title": "Debug Current Test",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.debugTestsCodeunit",
 				"title": "Debug Tests in Current Codeunit",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.clearTestResults",
 				"title": "Clear Test Results",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.clearCredentials",
 				"title": "Clear Credentials",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.setContainerCredential",
 				"title": "Set Container Credential",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.setVMCredential",
 				"title": "Set VM Credential",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.openConfigFile",
 				"title": "Open Config File",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.installTestRunnerService",
 				"title": "Install Test Runner Service",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.toggleCodeCoverage",
 				"title": "Toggle Code Coverage",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.showTableData",
 				"title": "Show Table Data",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.showRelatedTests",
 				"title": "Show Related Tests",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.listALFiles",
 				"title": "List AL Files",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			},
 			{
 				"command": "altestrunner.showPerformanceProfile",
 				"title": "Show Performance Profile",
-				"category": "AL Test Runner"
+				"category": "NP AL Test Runner"
 			}
 		],
 		"keybindings": [
@@ -374,26 +389,28 @@
 	"devDependencies": {
 		"@types/glob": "^7.1.4",
 		"@types/mocha": "^5.2.6",
-		"@types/node": "^10.17.60",
+		"@types/node": "^17.00.00",
 		"@types/sinon": "^7.5.2",
-		"@types/vscode": "^1.88.0",
+		"@types/vscode": "^1.86.0",
 		"glob": "^7.1.7",
 		"mocha": "^10.2.0",
 		"sinon": "^7.5.0",
 		"tslint": "^5.20.1",
 		"typescript": "^4.6.3",
-		"@vscode/test-electron": "^2.3.9"
+		"@vscode/test-electron": "^2.3.9",
+		"node-powershell": "^5.0.1"
 	},
 	"dependencies": {
 		"@types/xml2js": "^0.4.9",
 		"sanitize-filename": "^1.6.3",
 		"xml2js": "^0.5.0",
-		"@vscode/extension-telemetry": "0.5.0"
+		"@vscode/extension-telemetry": "0.5.0",
+		"node-powershell": "^5.0.1"
 	},
 	"__metadata": {
-		"id": "f819914f-db9b-4d2d-89ff-90b11b3f9109",
-		"publisherDisplayName": "James Pearson",
-		"publisherId": "4cdb0146-0f5a-4955-8fa1-24763da60923",
+		"id": "81e06a9c-e97a-4474-b24e-a1f1c2683fe4",
+		"publisherDisplayName": "NaviPartner",
+		"publisherId": "NaviPartner",
 		"isPreReleaseVersion": true,
 		"preRelease": true
 	}
