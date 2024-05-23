@@ -18,8 +18,10 @@ import { CodeCoverageCodeLensProvider } from './codeCoverageCodeLensProvider';
 import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
+//import { PowerShell, InvocationResult } from 'node-powershell';
 
 let terminal: vscode.Terminal;
+//let powershellSession = new PowerShell();
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
 const config = vscode.workspace.getConfiguration('al-test-runner');
@@ -63,7 +65,7 @@ export let alTestController: vscode.TestController;
 export let telemetryReporter: TelemetryReporter;
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('jamespearson.al-test-runner extension is activated');
+	console.log('navipartner.np-al-test-runner extension is activated');
 
 	let codelensProvider = new CodelensProvider();
 	vscode.languages.registerCodeLensProvider("*", codelensProvider);
@@ -237,6 +239,60 @@ function invokeCommand(command: string) {
 	terminal.sendText(' ');
 }
 
+/*
+export function invokePowerShellCommand(command: string, errorOnFailure: Boolean) : vscode.Terminal {
+	terminal = getALTestRunnerTerminal(getTerminalName());
+	terminal.sendText(' ');
+	terminal.sendText('Invoke-Script {' + command + '}');
+	terminal.sendText(' ');
+
+	if (errorOnFailure) {
+		if (terminal.exitStatus && terminal.exitStatus.code) {
+			vscode.window.showInformationMessage(`Exit code: ${terminal.exitStatus.code}`);
+			if (terminal.exitStatus.code != 0) {
+				throw new Error(`Exit code: ${terminal.exitStatus.code}`);
+			}
+		}
+	}
+	return terminal;
+}
+
+/*
+function getDocumentWorkspaceFolder(): string | undefined {
+	const fileName = vscode.window.activeTextEditor?.document.fileName;
+	return vscode.workspace.workspaceFolders
+		?.map((folder) => folder.uri.fsPath)
+		.filter((fsPath) => fileName?.startsWith(fsPath))[0];
+}
+
+export async function invokePowerShellCommandViaNodePowershell(command: string) : Promise<InvocationResult> {
+	
+	let alTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';	
+	powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`);
+
+	let npAlTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';		
+	powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`);
+	
+	let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
+	powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`);	
+
+	return powershellSession.invoke(command);
+}
+*/
+
+export function getSmbAlExtension() : vscode.Extension<any> {
+	let ext = vscode.extensions.getExtension('ms-dynamics-smb.al');
+	if (!ext) {
+		throw new Error(`Microsoft AL development extension is missing. Install this extension first.`);
+	}
+	return ext;
+}
+
+export function getSmbAlExtensionPath() : string {
+	let ext = getSmbAlExtension();
+	return ext.extensionPath;
+}
+
 function updateDecorations() {
 	if (!activeEditor) {
 		return;
@@ -295,7 +351,7 @@ function updateDecorations() {
 
 						if (config.highlightFailingLine) {
 							const failingLineRange = getRangeOfFailingLineFromCallstack(test.failure[0]["stack-trace"][0], test.$.method, activeEditor!.document);
-							if (failingLineRange !== undefined) {
+							if (failingLineRange !== undefined) {								
 								const decoration: vscode.DecorationOptions = { range: failingLineRange, hoverMessage: hoverMessage };
 								failingLines.push(decoration);
 							}
@@ -378,15 +434,41 @@ export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
 	}
 
 	let PSPath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';
+	terminal.show(false)
 	terminal.sendText('if ($null -eq (Get-Module ALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking}');
+
+	PSPath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';
+	terminal.show(false)
+	terminal.sendText('if ($null -eq (Get-Module NPALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking}');
+
 	return terminal;
 }
 
-export function getExtension() {
-	return vscode.extensions.getExtension('jamespearson.al-test-runner');
+export async function executeCommandInTerminal(command: string, terminal?: vscode.Terminal) {
+    // Get the dedicated/default terminal    
+    if (!terminal) {
+        terminal = getALTestRunnerTerminal(getTerminalName());
+    }
+
+    // Send the command to the terminal
+    terminal.sendText(command);
+
+    // Wait for a moment before reading the output
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Read the output from the terminal process
+	
+    //const output = terminal.process!.readData();
+	//process!
+    // Do something with the output (e.g., parse or display it)
+    //console.log('Terminal output:', output);
 }
 
-export function getRangeOfFailingLineFromCallstack(callstack: string, method: string, document: vscode.TextDocument): vscode.Range | void {
+export function getExtension() {
+	return vscode.extensions.getExtension('navipartner.np-al-test-runner');
+}
+
+export function getRangeOfFailingLineFromCallstack(callstack: string, method: string, document: vscode.TextDocument): vscode.Range  {
 	const methodStartLineForCallstack = getLineNumberOfMethodDeclaration(method, document);
 	if (methodStartLineForCallstack === -1) {
 		return;
@@ -437,9 +519,71 @@ export function getAppJsonKey(keyName: string) {
 	return appJson[keyName];
 }
 
-function getLastResultPath(): string {
+export function getLastResultPath(): string {
 	return getALTestRunnerPath() + '\\last.xml';
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() { }
+
+export async function getRunnerParams(command: string): Promise<types.ALTestAssembly[]> {
+	return new Promise(async (resolve) => {
+		sendDebugEvent('invokeTestRunner-start');
+		const config = getCurrentWorkspaceConfig();
+		getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
+		let publishType: types.PublishType = types.PublishType.None;
+
+		if (!config.automaticPublishing) {
+			switch (config.publishBeforeTest) {
+				case 'Publish':
+					publishType = types.PublishType.Publish;
+					break;
+				case 'Rapid application publish':
+					publishType = types.PublishType.Rapid;
+					break;
+			}
+		}
+
+		const result = await publishApp(publishType);
+		if (!result.success) {
+			const results: types.ALTestAssembly[] = [];
+			resolve(results);
+			return;
+		}
+
+		if (config.enableCodeCoverage) {
+			command += ' -GetCodeCoverage';
+		}
+
+		if (config.enablePerformanceProfiler) {
+			command += ' -GetPerformanceProfile';
+		}
+
+		if (existsSync(getLastResultPath())) {
+			unlinkSync(getLastResultPath());
+		}
+
+		terminal = getALTestRunnerTerminal(getTerminalName());
+		terminal.sendText(' ');
+		terminal.show(true);
+		terminal.sendText('cd "' + getTestFolderPath() + '"');
+		invokeCommand(config.preTestCommand);
+		terminal.sendText(command);
+		invokeCommand(config.postTestCommand);
+
+		awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
+			if (resultsAvailable) {
+				const results: types.ALTestAssembly[] = await readTestResults(vscode.Uri.file(getLastResultPath()));
+				resolve(results);
+
+				triggerUpdateDecorations();
+			}
+		});
+	});
+}
+
+export async function downloadClientSessionLibraries(version?: string) {   
+    if (!version) {
+		
+	}
+}
