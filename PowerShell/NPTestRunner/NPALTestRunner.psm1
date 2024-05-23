@@ -15,7 +15,7 @@ Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1)
 #Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psd1) -Global
 #Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psm1) -Global
 
-function Invoke-NPAlTests {
+function Invoke-NPALTests {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$false)]
@@ -44,6 +44,8 @@ function Invoke-NPAlTests {
     $environmentType = Get-ValueFromLaunchJson -KeyName 'environmentType'
     $tenant = Get-ValueFromLaunchJson -KeyName 'tenant'
     $serviceUrl = Get-ServiceUrl
+
+    Test-ServiceIsRunningAndHealthy
 
     switch ($environmentType) {
         OnPrem {
@@ -233,6 +235,58 @@ function Get-ServiceUrlCredentialCacheKey {
         }
         Default {
             throw "Environment type '$environmentType' is not supported!"
+        }
+    }
+}
+
+function Get-ServiceHealthUrl {
+    [CmdletBinding()]
+    param (
+    )
+
+    $environmentType = Get-ValueFromLaunchJson -KeyName 'environmentType'
+    
+    switch ($environmentType) {
+        OnPrem {
+            $server = Get-ValueFromLaunchJson -KeyName 'server'
+            $serverInstance = Get-ValueFromLaunchJson -KeyName 'serverInstance'
+            $port = Get-ValueFromLaunchJson -KeyName 'port'
+
+            $serviceUrl = "$($server.TrimEnd('/'))"
+            if (-not ([string]::IsNullOrEmpty($port))) {
+                $serviceUrl = "$serviceUrl`:$port"
+            }
+            $serviceUrl = "$serviceUrl/$serverInstance"
+            if (-not ([string]::IsNullOrEmpty($tenant))) {
+                $serviceUrl = "$serviceUrl/Health/System"
+            }
+        }
+        Default {
+            throw "Environment type '$environmentType' is not supported!"
+        }
+    }
+}
+
+function Test-ServiceIsRunningAndHealthy {
+    param (
+    )
+
+    $environmentType = Get-ValueFromLaunchJson -KeyName 'environmentType'
+
+    switch ($environmentType) {
+        OnPrem {
+            $healthServiceUrl = Get-ServiceHealthUrl
+            $serviceUrl = Get-ServiceUrl
+            $healthCheckResult = Invoke-WebRequest -Uri $healthServiceUrl -UseBasicParsing -TimeoutSec 10
+            if ($healthCheckResult.StatusCode -ne 200) {
+                throw "$serviceUrl is not available. Please start the container, or check NST, eventually retry."
+            }
+            return $true
+        }
+        Default {
+            # For SaaS Sandboxes we don't have any method without authentication so we have to be authenticated first.
+            # So let's consider the environment is up and user knows about the real state before development and testing.
+            return $true
         }
     }
 }

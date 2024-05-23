@@ -200,7 +200,7 @@ export async function runTest(filename?: string, selectionStart?: number, extens
 
                 sendDebugEvent('runTest-ready', { filename: filename, selectionStart: selectionStart.toString(), extensionId: extensionId!, extensionName: extensionName! });
                 
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPAlTests -SmbAlExtPath "${smbAlExtPath}" -Tests Test -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -FileName "${filename}" -SelectionStart ${selectionStart} -ResultsFilePath ${resultsFilePath}`);
+                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests Test -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -FileName "${filename}" -SelectionStart ${selectionStart} -ResultsFilePath ${resultsFilePath}`);
                 resolve(results);
             }
             else {
@@ -214,6 +214,9 @@ export async function runAllTests(extensionId?: string, extensionName?: string):
     return new Promise(async (resolve) => {
         await readyToRunTests().then(async ready => {
             if (ready) {
+                let resultsFilePath = getLastResultPath();
+                let smbAlExtPath = getSmbAlExtensionPath();
+
                 if (extensionId === undefined) {
                     extensionId = getAppJsonKey('id');
                 }
@@ -224,7 +227,7 @@ export async function runAllTests(extensionId?: string, extensionName?: string):
 
                 sendDebugEvent('runAllTests-ready');
 
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-ALTestRunner -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
+                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -ResultsFilePath ${resultsFilePath} -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
                 resolve(results);
             }
             else {
@@ -238,6 +241,9 @@ export async function runSelectedTests(request: vscode.TestRunRequest, extension
     return new Promise(async (resolve) => {
         await readyToRunTests().then(async ready => {
             if (ready) {
+                let resultsFilePath = getLastResultPath();
+                let smbAlExtPath = getSmbAlExtensionPath();
+                
                 if (extensionId === undefined) {
                     extensionId = getAppJsonKey('id');
                 }
@@ -251,7 +257,7 @@ export async function runSelectedTests(request: vscode.TestRunRequest, extension
                 const disabledTests = getDisabledTestsForRequest(request);
                 const disabledTestsJson = JSON.stringify(disabledTests);
 
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-ALTestRunner -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -DisabledTests ('${disabledTestsJson}' | ConvertFrom-Json) -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`)
+                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -DisabledTests ('${disabledTestsJson}'  -ResultsFilePath ${resultsFilePath} | ConvertFrom-Json) -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`)
                 resolve(results);
             }
             else {
