@@ -587,3 +587,14 @@ export async function downloadClientSessionLibraries(version?: string) {
 		
 	}
 }
+
+export async function invokeCommandFromAlDevExtension(command: string, params?: any[]) : Promise<unknown> {
+	var extension =  getSmbAlExtension();
+
+	// is the ext loaded and ready?
+	if( extension.isActive == false ){
+		await extension.activate(); 
+	}
+
+	return vscode.commands.executeCommand(command, params);
+}

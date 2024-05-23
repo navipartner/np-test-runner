@@ -260,6 +260,7 @@ function Get-ServiceHealthUrl {
             if (-not ([string]::IsNullOrEmpty($tenant))) {
                 $serviceUrl = "$serviceUrl/Health/System"
             }
+            return $serviceUrl
         }
         Default {
             throw "Environment type '$environmentType' is not supported!"
@@ -277,8 +278,14 @@ function Test-ServiceIsRunningAndHealthy {
         OnPrem {
             $healthServiceUrl = Get-ServiceHealthUrl
             $serviceUrl = Get-ServiceUrl
-            $healthCheckResult = Invoke-WebRequest -Uri $healthServiceUrl -UseBasicParsing -TimeoutSec 10
-            if ($healthCheckResult.StatusCode -ne 200) {
+            $healthCheckResult = $null
+            try {
+                $healthCheckResult = Invoke-WebRequest -Uri $healthServiceUrl -UseBasicParsing -TimeoutSec 10
+                
+            } catch {
+                $healthCheckResult = $null
+            }
+            if ((!$healthCheckResult) -or ($healthCheckResult.StatusCode -ne 200)) {
                 throw "$serviceUrl is not available. Please start the container, or check NST, eventually retry."
             }
             return $true
