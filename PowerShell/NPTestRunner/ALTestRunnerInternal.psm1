@@ -1,4 +1,5 @@
-using module ./ClientContext
+using module .\ClientContext
+#using module .\ALExtBridge
 
 function Run-AlTestsInternal
 (

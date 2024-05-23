@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getALObjectFromPath, getALObjectOfDocument, getFilePathOfObject, getTestMethodRangesFromDocument } from './alFileHelper';
 import { getALTestRunnerConfig, getCurrentWorkspaceConfig, getLaunchConfiguration, launchConfigIsValid, selectLaunchConfig, setALTestRunnerConfig } from './config';
-import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, invokeTestRunner, outputWriter } from './extension';
+import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, invokeTestRunner, outputWriter, getLastResultPath, getSmbAlExtensionPath } from './extension';
 import { ALTestAssembly, ALTestResult, ALMethod, DisabledTest, ALFile, launchConfigValidity, CodeCoverageDisplay } from './types';
 import * as path from 'path';
 import { sendDebugEvent, sendTestDebugStartEvent, sendTestRunFinishedEvent, sendTestRunStartEvent } from './telemetry';
@@ -182,6 +182,9 @@ export async function runTest(filename?: string, selectionStart?: number, extens
     return new Promise(async (resolve) => {
         await readyToRunTests().then(async ready => {
             if (ready) {
+                let resultsFilePath = getLastResultPath();
+                let smbAlExtPath = getSmbAlExtensionPath();
+                
                 if (filename === undefined) {
                     filename = vscode.window.activeTextEditor!.document.fileName;
                 }
@@ -196,8 +199,8 @@ export async function runTest(filename?: string, selectionStart?: number, extens
                 }
 
                 sendDebugEvent('runTest-ready', { filename: filename, selectionStart: selectionStart.toString(), extensionId: extensionId!, extensionName: extensionName! });
-
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-ALTestRunner -Tests Test -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -FileName "${filename}" -SelectionStart ${selectionStart} -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
+                
+                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPAlTests -SmbAlExtPath "${smbAlExtPath}" -Tests Test -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -FileName "${filename}" -SelectionStart ${selectionStart} -ResultsFilePath ${resultsFilePath}`);
                 resolve(results);
             }
             else {
