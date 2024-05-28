@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { debugTestHandler, getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
 import { getALTestRunnerConfig, getALTestRunnerConfigPath, getALTestRunnerPath, getLaunchConfiguration, setALTestRunnerConfig } from './config';
 import { existsSync, readdirSync, unlinkSync } from 'fs';
-import { getALTestRunnerTerminal, getTerminalName, triggerUpdateDecorations } from './extension';
+import { getALTestRunnerTerminal, getTerminalName, triggerUpdateDecorations, downloadClientSessionLibraries } from './extension';
 import * as types from './types'
 import { toggleCodeCoverageDisplay } from './coverage';
 import { showTableData } from './showTableData';
@@ -112,4 +112,9 @@ export function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('altestrunner.showPerformanceProfile', () => {
 		showPerformanceProfile();
 	}))
+
+	context.subscriptions.push(vscode.commands.registerCommand('altestrunner.downloadClientSessionLibraries', async () => {
+		//await downloadClientSessionLibraries(types.BcArtifactSource.OnPrem, version);
+		await downloadClientSessionLibraries();
+	}));
 }

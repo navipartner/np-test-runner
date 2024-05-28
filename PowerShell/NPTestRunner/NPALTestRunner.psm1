@@ -317,7 +317,7 @@ function Get-ClientSessionLibrariesFromBcArtifacts {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
-        #[ValidateSet("OnPrem", "Sandbox", "Insider")]
+        [ValidateSet("OnPrem", "Sandbox", "Insider")]
         [BcArtifactSource]$BcArtifactSource,
         [Parameter(Mandatory=$true)]
         [string]$Version
@@ -337,15 +337,16 @@ function Get-BcArtifactsSourceUrl {
         [BcArtifactSource]$BcArtifactSource
     )
     
+    # https://github.com/microsoft/navcontainerhelper/blob/65337fc69dc39bb169135ebaafab2f3fd9466c38/HelperFunctions.ps1#L1357
     switch ($BcArtifactSource) {
         OnPrem { 
-            return "https://bcartifacts.blob.core.windows.net/onprem/"
+            return "https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/onprem/"
         }
         Sandbox {
-            return "https://bcartifacts.blob.core.windows.net/sandbox/"
+            return "https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/sandbox/"
         }
         Insider {
-            return "https://bcinsider.blob.core.windows.net/sandbox/"
+            return "https://bcinsider-fvh2ekdjecfjd6gk.b02.azurefd.net/sandbox/"
         }
         Default {
             throw "Unsupported value: '$BcArtifactSource'"

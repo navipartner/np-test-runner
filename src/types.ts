@@ -140,3 +140,9 @@ export enum launchConfigValidity {
 	Invalid,
 	NeverValid
 }
+
+export enum BcArtifactSource {
+	OnPrem,
+	Sandbox,
+	Insider
+}

@@ -10,7 +10,7 @@ import { getOutputWriter, OutputWriter } from './output';
 import { createTestController, deleteTestItemForFilename, discoverTests, discoverTestsInDocument, discoverTestsInFileName } from './testController';
 import { onChangeAppFile, publishApp } from './publish';
 import { awaitFileExistence } from './file';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { createTelemetryReporter, sendDebugEvent } from './telemetry';
 import { TestCoverageCodeLensProvider } from './testCoverageCodeLensProvider';
@@ -18,6 +18,9 @@ import { CodeCoverageCodeLensProvider } from './codeCoverageCodeLensProvider';
 import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
+import * as fetch from 'node-fetch'; 
+import { DOMParser } from 'xmldom';
+import { Console } from 'console';
 //import { PowerShell, InvocationResult } from 'node-powershell';
 
 let terminal: vscode.Terminal;
@@ -582,10 +585,109 @@ export async function getRunnerParams(command: string): Promise<types.ALTestAsse
 	});
 }
 
-export async function downloadClientSessionLibraries(version?: string) {   
-    if (!version) {
+//export async function downloadClientSessionLibraries(artifactSource: types.BcArtifactSource = types.BcArtifactSource.OnPrem, version?: string) {   
+export async function downloadClientSessionLibraries() {   
+	//if (!version) {
 		
+	//}
+
+	/*
+	
+	*/
+
+    //const versions = await fetchVersions(`https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/onprem/`);
+	const selectedVersion = await showArtifactVersionQuickPick(`https://bcartifacts.blob.core.windows.net/onprem/`, null, null);
+	if (selectedVersion) {
+		vscode.window.showInformationMessage(`You selected: ${selectedVersion}`);
+
+		let download = new Promise(async (resolve) => {
+			sendDebugEvent('invokeCSLibsDownload-start');
+			const config = getCurrentWorkspaceConfig();
+	
+	
+			let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSource `;
+			
+			terminal = getALTestRunnerTerminal(getTerminalName());
+			terminal.show(false);
+			terminal.sendText(command);
+	
+			awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
+				if (resultsAvailable) {
+					const results: types.ALTestAssembly[] = await readTestResults(vscode.Uri.file(getLastResultPath()));
+					resolve(results);
+	
+					triggerUpdateDecorations();
+				}
+			});
+		});
+	
+		return download;
 	}
+}
+
+async function fetchVersions(sourceUrl: string, filter: string): Promise<string[]> {
+    let requestUrl = `${sourceUrl}?comp=list&restype=container`;
+	if (filter) {
+		requestUrl = `${requestUrl}&prefix=${filter}`;
+	}
+	const response = await fetch(requestUrl);
+    const text = await response.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(text, "application/xml");
+    const blobs = xmlDoc.getElementsByTagName("Blob");
+    const versions: string[] = [];
+    for (let i = 0; i < blobs.length; i++) {
+        const name = blobs[i].getElementsByTagName("Name")[0].textContent || '';
+        versions.push(name);
+    }
+    return versions;
+}
+
+async function showArtifactVersionQuickPick(sourceUrl: string, text: string, versions: string[]): Promise<string | undefined> {
+	let quickPick = vscode.window.createQuickPick();
+	if (versions) {
+		quickPick.items = versions.map(version => ({ label: version }));
+	}
+	quickPick.placeholder = 'Type BC [major.minor] to filter versions...';
+
+	return new Promise<string | undefined>((resolve) => {
+		quickPick.onDidChangeSelection(selection => {
+			if (selection[0]) {
+				resolve(selection[0].label);
+				quickPick.hide();
+			}
+		});
+
+		quickPick.onDidChangeValue((value: string) => {
+			if (value.length > 2) {
+				let artifacts = null;
+				if (versions) {
+					artifacts = versions.filter(item => item.startsWith(value));
+				}
+				if ((!artifacts) || ((artifacts) && (artifacts.length <= 0))) {
+					updateVersionPicker(quickPick, value).then((resolve) => {
+						quickPick = resolve;
+					});
+				}
+			}
+		});
+	
+		quickPick.onDidHide(() => {
+			resolve(undefined);
+			quickPick.dispose();
+		});
+	
+		quickPick.show();
+	});
+}
+
+async function updateVersionPicker(versionPicker: vscode.QuickPick<vscode.QuickPickItem>, filter: string): Promise<vscode.QuickPick<vscode.QuickPickItem>> {
+	let versions = await fetchVersions(`https://bcartifacts.blob.core.windows.net/onprem/`, filter);
+	versionPicker.items = versions.map(version => ({ label: version }));
+
+	return new Promise((resolve) => {
+		resolve(versionPicker);
+	});
 }
 
 export async function invokeCommandFromAlDevExtension(command: string, params?: any[]) : Promise<unknown> {
