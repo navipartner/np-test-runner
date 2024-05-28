@@ -142,7 +142,12 @@ export enum launchConfigValidity {
 }
 
 export enum BcArtifactSource {
-	OnPrem,
-	Sandbox,
-	Insider
+	OnPrem = 'OnPrem',
+	Sandbox = 'Sandbox',
+	Insider = 'Insider'
+}
+
+export enum BcArtifactSourceEndpoint {
+	CDN = 'CDN',
+	BLOB = 'BLOB'
 }
