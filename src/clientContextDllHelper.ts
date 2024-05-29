@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
-import { ALFile, ALObject, BcArtifactSource, BcArtifactSourceEndpoint, CodeCoverageDisplay, CodeCoverageLine, CodeCoverageObject } from './types';
-import { activeEditor, passingTestDecorationType, outputWriter } from './extension';
+import * as types from './types';
+import { getALTestRunnerTerminal, getTerminalName } from './extension';
+import { getCurrentWorkspaceConfig } from './config';
 import * as fetch from 'node-fetch'; 
 import { DOMParser } from 'xmldom';
-import { Console } from 'console';
+import { awaitFileExistence } from './file';
 
+let terminal: vscode.Terminal;
 
 async function fetchVersions(sourceUrl: string, filter: string): Promise<string[]> {
     let requestUrl = `${sourceUrl}?comp=list&restype=container`;
@@ -95,30 +97,40 @@ async function updateVersionPicker(versionPicker: vscode.QuickPick<vscode.QuickP
 	});
 }
 
-export function getBcArtifactsUrl(artifactsSource: BcArtifactSource, artifactsSourceEndpoint: BcArtifactSourceEndpoint) : string {
+export function getBcArtifactsUrl(artifactsSource: types.BcArtifactSource, artifactsSourceEndpoint: types.BcArtifactSourceEndpoint) : string {
+	let unknownEndpoint = false;
     switch (artifactsSource) {
-        case BcArtifactSource.OnPrem:
+        case types.BcArtifactSource.OnPrem:
             switch (artifactsSourceEndpoint) {
-                case BcArtifactSourceEndpoint.BLOB:
+                case types.BcArtifactSourceEndpoint.BLOB:
                     return 'https://bcartifacts.blob.core.windows.net/onprem/';
-                case BcArtifactSourceEndpoint.CDN:
+                case types.BcArtifactSourceEndpoint.CDN:
                     return 'https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/onprem/';
+				default:
+					unknownEndpoint = true;
+					break;
             }
             break;
-        case BcArtifactSource.Sandbox:
+        case types.BcArtifactSource.Sandbox:
             switch (artifactsSourceEndpoint) {
-                case BcArtifactSourceEndpoint.BLOB:
+                case types.BcArtifactSourceEndpoint.BLOB:
                     return 'https://bcartifacts.blob.core.windows.net/sandbox/';
-                case BcArtifactSourceEndpoint.CDN:
+                case types.BcArtifactSourceEndpoint.CDN:
                     return 'https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/sandbox/';
+				default:
+					unknownEndpoint = true;
+					break;
             }
             break;
-        case BcArtifactSource.Insider:
+        case types.BcArtifactSource.Insider:
             switch (artifactsSourceEndpoint) {
-                case BcArtifactSourceEndpoint.BLOB:
+                case types.BcArtifactSourceEndpoint.BLOB:
                     return 'https://bcinsider.blob.core.windows.net/sandbox/';
-                case BcArtifactSourceEndpoint.CDN:
+                case types.BcArtifactSourceEndpoint.CDN:
                     return 'https://bcinsider-fvh2ekdjecfjd6gk.b02.azurefd.net/sandbox/';
+				default:
+					unknownEndpoint = true;
+					break;
             }
             break;
         default:
@@ -126,5 +138,32 @@ export function getBcArtifactsUrl(artifactsSource: BcArtifactSource, artifactsSo
             break;
     }
 
+	if (unknownEndpoint) {
+		throw new Error(`Not supported artifact source endpoint type: ${artifactsSourceEndpoint}`);
+	}
+
     return null;
+}
+
+export async function downloadClientSessionLibraries() : Promise<Boolean> {   
+	const artifactSource = await showSimpleQuickPick([types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider]);
+	if (!artifactSource) {
+		return;
+	}
+
+	const artifactSourceBlobUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.BLOB);
+	const artifactSourceCdnUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.CDN);
+	
+	const selectedVersion = await showArtifactVersionQuickPick(artifactSourceBlobUrl, null, null);
+	if (selectedVersion) {
+		const versionOnly = selectedVersion.split('/')[0];	
+		let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
+		
+		terminal = getALTestRunnerTerminal(getTerminalName());
+		terminal.show(false);
+		terminal.sendText(command);
+
+		//return awaitFileExistence(getLastResultPath(), 0);
+		return new Promise<boolean>(resolve => { resolve(true); });
+	}
 }

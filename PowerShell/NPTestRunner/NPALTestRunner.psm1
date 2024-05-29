@@ -309,49 +309,28 @@ function Invoke-RipUnzip {
     )
     
     #"$PSScriptRoot\.\ripunzip\ripunzip.exe unzip-uri -d Libs https://bcartifacts.azureedge.net/onprem/23.3.14876.15024/platform 'Test Assemblies\*'"
-    $cmd = "$PSScriptRoot\..\ripunzip\ripunzip.exe unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
+    $cmd = "$PSScriptRoot\..\..\.test-runner\ripunzip\ripunzip.exe unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
     Invoke-Expression -Command $cmd
 }
 
 function Get-ClientSessionLibrariesFromBcArtifacts {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true)]
-        [ValidateSet("OnPrem", "Sandbox", "Insider")]
-        [BcArtifactSource]$BcArtifactSource,
+        [string]$BcArtifactSourceUrl,
         [Parameter(Mandatory=$true)]
         [string]$Version
     )
 
-    $url = Get-BcArtifactsSourceUrl -BcArtifactSource $BcArtifactSource
-    $url = $url.TrimEnd("/")
-    $url = "$url/$Version/platform"
+    $BcArtifactSourceUrl = $BcArtifactSourceUrl.TrimEnd("/")
+    $BcArtifactSourceUrl = "$BcArtifactSourceUrl/$Version/platform"
 
-    Invoke-RipUnzip -Uri $url -DestinationPath $Global:ClientSessionLibsPath -ExtractionFilter "'Test Assemblies\*'"
-}
-
-function Get-BcArtifactsSourceUrl {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$true)]
-        [BcArtifactSource]$BcArtifactSource
-    )
-    
-    # https://github.com/microsoft/navcontainerhelper/blob/65337fc69dc39bb169135ebaafab2f3fd9466c38/HelperFunctions.ps1#L1357
-    switch ($BcArtifactSource) {
-        OnPrem { 
-            return "https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/onprem/"
-        }
-        Sandbox {
-            return "https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/sandbox/"
-        }
-        Insider {
-            return "https://bcinsider-fvh2ekdjecfjd6gk.b02.azurefd.net/sandbox/"
-        }
-        Default {
-            throw "Unsupported value: '$BcArtifactSource'"
-        }
+    Set-ALTestRunnerConfigValue -KeyName 'SelectedBcVersion' -KeyValue $Version
+    $destPath = Join-Path $Global:ClientSessionLibsPath $Version
+    if (!(Test-Path $destPath)) {
+        $null = New-Item -Path $destPath -ItemType Directory -Force
     }
+
+    Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'Test Assemblies\*'"
 }
 
 $code = @"

@@ -583,46 +583,6 @@ export async function getRunnerParams(command: string): Promise<types.ALTestAsse
 	});
 }
 
-//export async function downloadClientSessionLibraries(artifactSource: types.BcArtifactSource = types.BcArtifactSource.OnPrem, version?: string) {   
-export async function downloadClientSessionLibraries() {   
-    //const versions = await fetchVersions(`https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/onprem/`);
-	const artifactSource = await showSimpleQuickPick([types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider]);
-	if (!artifactSource) {
-		return;
-	}
-
-	const artifactSourceBlobUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.BLOB);
-	const artifactSourceCdnUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.CDN);
-	
-	const selectedVersion = await showArtifactVersionQuickPick(artifactSourceBlobUrl, null, null);
-	if (selectedVersion) {
-		vscode.window.showInformationMessage(`You selected: ${selectedVersion}`);
-
-		let download = new Promise(async (resolve) => {
-			sendDebugEvent('invokeCSLibsDownload-start');
-			const config = getCurrentWorkspaceConfig();
-	
-	
-			let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSource `;
-			
-			terminal = getALTestRunnerTerminal(getTerminalName());
-			terminal.show(false);
-			terminal.sendText(command);
-	
-			awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
-				if (resultsAvailable) {
-					const results: types.ALTestAssembly[] = await readTestResults(vscode.Uri.file(getLastResultPath()));
-					resolve(results);
-	
-					triggerUpdateDecorations();
-				}
-			});
-		});
-	
-		return download;
-	}
-}
-
 export async function invokeCommandFromAlDevExtension(command: string, params?: any[]) : Promise<unknown> {
 	var extension =  getSmbAlExtension();
 
