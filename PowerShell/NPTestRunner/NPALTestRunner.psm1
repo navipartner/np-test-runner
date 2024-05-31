@@ -7,8 +7,9 @@ enum BcArtifactSource {
     Insider
 }
 
-Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psd1) -Global
-Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psm1) -Global
+#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psd1) -Global
+#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psm1) -Global
+#. "$PSScriptRoot\ClientContext\ClientContextLibLoader.ps1" -BcLibVersion (Get-SelectedBcVersion)
 Import-Module (Join-Path $PSScriptRoot EntraIdAuth\EntraIdAuth.psm1)
 Import-Module (Join-Path $PSScriptRoot ALTestRunnerInternal.psm1)
 Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1)
@@ -298,6 +299,68 @@ function Test-ServiceIsRunningAndHealthy {
     }
 }
 
+function Get-VSCodeExtensionRootPath {
+    [CmdletBinding()]
+    param (
+    )
+    
+    $currentPath = $PSScriptRoot
+
+    while ($currentPath) {
+        $manifestFile = Get-ChildItem -Path $currentPath -Filter 'package.json'
+        if ($manifestFile) {
+            return $currentPath
+        }
+
+        $currentPath = Split-Path $currentPath -ErrorAction SilentlyContinue
+    }
+
+    throw "Can't find VSCode extension root path."
+}
+
+function Get-VSCodeExtensionInternalFolderPath {
+    [CmdletBinding()]
+    param (
+    )
+    
+    $rootPath = Get-VSCodeExtensionRootPath
+    $internalPath = Join-Path $rootPath '.altestrunner'
+    if (!(Test-Path $internalPath)) {
+        $null = New-Item $internalPath -ItemType Directory -Force
+    }
+
+    return $internalPath
+}
+
+function Get-VSCodeExtensionClientContextLibsRootPath {
+    [CmdletBinding()]
+    param (
+    )
+    
+    $path = Get-VSCodeExtensionInternalFolderPath
+    $path = Join-Path $path 'CSLibs'
+    if (!(Test-Path $path)) {
+        $null = New-Item $path -ItemType Directory -Force
+    }
+
+    return $path
+}
+
+function  Get-RipUnzipExeFilePath {
+    [CmdletBinding()]
+    param (
+    )
+
+    $vsCodeExtRootPath = Get-VSCodeExtensionRootPath
+    $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', 'ripunzip.exe'
+
+    if (!(Test-Path $ripUnzipPath)) {
+        throw "'ripunzip.exe' path $ripUnzipPath doesn't exist!"
+    }
+
+    return $ripUnzipPath
+}
+
 function Invoke-RipUnzip {    
     [CmdletBinding()]
     param (
@@ -308,8 +371,8 @@ function Invoke-RipUnzip {
         [string]$ExtractionFilter
     )
     
-    #"$PSScriptRoot\.\ripunzip\ripunzip.exe unzip-uri -d Libs https://bcartifacts.azureedge.net/onprem/23.3.14876.15024/platform 'Test Assemblies\*'"
-    $cmd = "$PSScriptRoot\..\..\.test-runner\ripunzip\ripunzip.exe unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
+    $ripUnzipPath = Get-RipUnzipExeFilePath
+    $cmd = "$ripUnzipPath unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
     Invoke-Expression -Command $cmd
 }
 
@@ -324,8 +387,8 @@ function Get-ClientSessionLibrariesFromBcArtifacts {
     $BcArtifactSourceUrl = $BcArtifactSourceUrl.TrimEnd("/")
     $BcArtifactSourceUrl = "$BcArtifactSourceUrl/$Version/platform"
 
-    Set-ALTestRunnerConfigValue -KeyName 'SelectedBcVersion' -KeyValue $Version
-    $destPath = Join-Path $Global:ClientSessionLibsPath $Version
+    Set-SelectedBcVersion -BcVersion $Version
+    $destPath = Get-SelectedBcVersionLibPath
     if (!(Test-Path $destPath)) {
         $null = New-Item -Path $destPath -ItemType Directory -Force
     }
@@ -491,6 +554,38 @@ function Get-NavUserPasswordCredentialsNotWorking {
     #[Microsoft.AspNetCore.DataProtection.DataProtectionProvider]::Create(()
 }
 
+function Get-SelectedBcVersion {
+    [CmdletBinding()]
+    param(
+    )
+
+    $global:SelectedBcVersion = Get-ValueFromALTestRunnerConfig -KeyName 'selectedBcVersion'
+    return $global:SelectedBcVersion
+}
+
+function Set-SelectedBcVersion {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$BcVersion
+    )
+
+    $global:SelectedBcVersion = Set-ALTestRunnerConfigValue -KeyName 'selectedBcVersion' -KeyValue $BcVersion
+    return $global:SelectedBcVersion
+}
+
+function Get-SelectedBcVersionLibPath {
+    [CmdletBinding()]
+    param(
+    )
+
+    $path = Get-VSCodeExtensionClientContextLibsRootPath
+    Write-Host "xxx 1: $path"
+    $destPath = Join-Path $path (Get-SelectedBcVersion)
+    Write-Host "xxx 2: $destPath"
+    return $destPath
+}
+
 ##########################
 # From BcContainerHelper #
 ##########################
@@ -524,8 +619,8 @@ function Test-BcAuthContext {
 
 
 
-
-$Global:ExtensionSystemFolderPath = Join-Path $PSScriptRoot ".test-runner"
-$Global:ClientSessionLibsPath = Join-Path $Global:ExtensionSystemFolderPath "CSLibs"
+$Global:ExtensionSystemFolderPath = Get-ALTestRunnerConfigPath -ReturnFolderPath
+$global:SelectedBcVersion = Get-SelectedBcVersion
+$Global:ClientSessionLibsPath = Get-SelectedBcVersionLibPath
 
 Export-ModuleMember -Function *
