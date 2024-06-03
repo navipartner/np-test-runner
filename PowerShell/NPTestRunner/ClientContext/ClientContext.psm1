@@ -34,18 +34,9 @@ class ClientContext {
     {
         $this.Initialize($serviceUrl, ([AuthenticationScheme]::AzureActiveDirectory), $tokenCredential, $interactionTimeout, $culture)
     }
-
-    LoadLibraries() {
-        $dlls = Get-ChildItem $Global:ClientSessionLibsPath -Filter '*.dll' -Recurse
-        $dlls | ForEach-Object { 
-            [void][Reflection.Assembly]::LoadFrom($_) 
-        }
-    }
-    
+   
     Initialize([string] $serviceUrl, [AuthenticationScheme] $authenticationScheme, [System.Net.ICredentials] $credential, [timespan] $interactionTimeout, [string] $culture) {
         
-        $this.LoadLibraries()
-
         $clientServicesUrl = $serviceUrl
         if((-not $clientServicesUrl.Contains("/cs/")) -and (-not $clientServicesUrl.Contains("/cs?")))
         {

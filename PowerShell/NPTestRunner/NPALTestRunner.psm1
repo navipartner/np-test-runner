@@ -1,6 +1,5 @@
 #requires -Version 5.0
 
-
 enum BcArtifactSource {
     OnPrem
     Sandbox
@@ -10,9 +9,9 @@ enum BcArtifactSource {
 #Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psd1) -Global
 #Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psm1) -Global
 #. "$PSScriptRoot\ClientContext\ClientContextLibLoader.ps1" -BcLibVersion (Get-SelectedBcVersion)
-Import-Module (Join-Path $PSScriptRoot EntraIdAuth\EntraIdAuth.psm1)
-Import-Module (Join-Path $PSScriptRoot ALTestRunnerInternal.psm1)
-Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1)
+Import-Module (Join-Path $PSScriptRoot EntraIdAuth\EntraIdAuth.psm1) -Global
+Import-Module (Join-Path $PSScriptRoot ALTestRunnerInternal.psm1) -Global
+Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1) -Global
 #Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psd1) -Global
 #Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psm1) -Global
 
@@ -47,6 +46,29 @@ function Invoke-NPALTests {
     $serviceUrl = Get-ServiceUrl
 
     Test-ServiceIsRunningAndHealthy
+
+    #Import-ClientContextModule -Version (Get-SelectedBcVersion) 
+    $Version = Get-SelectedBcVersion
+    if ($global:ClientContextLoadedModuleVersion) {
+        if ($global:ClientContextLoadedModuleVersion -eq $Version) {
+            return
+        }
+    }
+
+    Push-Location
+
+    try {
+        Set-Location $PSScriptRoot
+        . (Join-Path $PSScriptRoot -ChildPath 'ClientContext' -AdditionalChildPath 'ClientContextLibLoader.ps1') -BcLibVersion $Version
+        . (Join-Path $PSScriptRoot 'ClientSessionLibLoader.ps1')
+        $global:ClientContextLoadedModuleVersion = $Version
+    }
+    catch {
+        Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
+    }
+    finally {
+        Pop-Location
+    }
 
     switch ($environmentType) {
         OnPrem {
@@ -124,8 +146,6 @@ function Invoke-NPALTests {
         $Params.Add('SaveResultFile', $false);
     }
 
-    #Run-AlTests -ServiceUrl $serviceUrl -Credential $creds -AutorizationType NavUserPassword -TestCodeunitsRange 85004 -TestProcedureRange 'LookupReversedTransaction' -SaveResultFile $true
-    # Run-AlTests -ServiceUrl $serviceUrl -Credential $creds -AutorizationType NavUserPassword @Params
     Run-AlTests -ServiceUrl $serviceUrl @Params
 }
 
@@ -393,7 +413,29 @@ function Get-ClientSessionLibrariesFromBcArtifacts {
         $null = New-Item -Path $destPath -ItemType Directory -Force
     }
 
-    Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'Test Assemblies\*'"
+    Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'Applications\testframework\TestRunner\Internal\*.dll'"
+}
+
+function Import-ClientContextModule {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Version
+    )
+
+    if ($global:ClientContextLoadedModuleVersion) {
+        if ($global:ClientContextLoadedModuleVersion -eq $Version) {
+            return
+        }
+    }
+
+    try {
+        . (Join-Path $PSScriptRoot -ChildPath 'ClientContext' -AdditionalChildPath 'ClientContextLibLoader.ps1') -BcLibVersion $Version
+        $global:ClientContextLoadedModuleVersion = $Version
+    }
+    catch {
+        Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
+    }
 }
 
 $code = @"
@@ -510,7 +552,7 @@ function Get-ALDevCacheFileContent {
     $smbAlCacheFilePath = Join-Path $SmbAlExtBinPath $FileName
     
     if (-not (Test-Path $smbAlCacheFilePath)) {
-        Write-Error "Requested credential cache file $FileName doesn't exist."
+        Write-Error "Requested credential cache file $FileName doesn't exist. Please, authenticate using the standard Microsoft AL development extension first and then try again."
     }
 
     try {
@@ -560,6 +602,11 @@ function Get-SelectedBcVersion {
     )
 
     $global:SelectedBcVersion = Get-ValueFromALTestRunnerConfig -KeyName 'selectedBcVersion'
+
+    if ([string]::IsNullOrEmpty($global:SelectedBcVersion)) {
+        throw "You have to select BC version and eventually download missing libraries."
+    }
+
     return $global:SelectedBcVersion
 }
 
@@ -580,9 +627,7 @@ function Get-SelectedBcVersionLibPath {
     )
 
     $path = Get-VSCodeExtensionClientContextLibsRootPath
-    Write-Host "xxx 1: $path"
     $destPath = Join-Path $path (Get-SelectedBcVersion)
-    Write-Host "xxx 2: $destPath"
     return $destPath
 }
 

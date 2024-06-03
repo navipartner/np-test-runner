@@ -5,19 +5,19 @@ param(
 
 Push-Location
 
-$alRunnerPath = Get-ALTestRunnerConfigPath -ReturnFolderPath
+$libsPath = Get-VSCodeExtensionClientContextLibsRootPath
 
 try {
 
     Set-Location $PSScriptRoot
 
-    $dlls = Get-ChildItem -Path "$alRunnerPath\CSLibs\$BcLibVersion\" -Filter *.dll -Recurse -Force
+    $dlls = Get-ChildItem -Path "$libsPath\$BcLibVersion\" -Filter *.dll -Recurse -Force
     $dlls | ForEach-Object { 
         [void][Reflection.Assembly]::LoadFrom($_) 
     }    
 
 
-    Import-Module .\ClientContext.psm1
+    Import-Module .\ClientContext.psm1 -Global
     . .\ClientContextLibLoaderHelper.ps1
 } 
 catch {
@@ -26,5 +26,3 @@ catch {
 finally {
     Pop-Location
 }
-
-$clientContext = [ClientContext]::new('any-url', 10, 'culture')

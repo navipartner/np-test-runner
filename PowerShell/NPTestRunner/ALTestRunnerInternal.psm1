@@ -279,6 +279,8 @@ function Setup-TestRun
     [bool] $StabilityRun
 )
 {
+    . (Join-Path $PSScriptRoot .\ClientSessionLibLoader.ps1)
+
     Write-Host "Setting up test run: $CodeCoverageTrackingType - $CodeCoverageOutputPath"
     if($CodeCoverageTrackingType -ne 'Disabled')
     {
@@ -378,11 +380,12 @@ function Open-ClientSessionWithWait
             {
                 Start-Sleep -Seconds 1
                 $ClientSessionTimeout--
+                $lastException = $_.Exception
                 $lastErrorMessage = $_.Exception.Message
             }
         }
 
-        throw "Could not open the client session. Check if the web server is running and you can log in. Last error: $lastErrorMessage"
+        throw "Could not open the client session. Check if the web server is running and you can log in. Last error: $lastErrorMessage`n$lastException"
 }
 
 function Set-TestCodeunits
