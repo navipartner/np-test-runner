@@ -438,11 +438,11 @@ export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
 
 	let PSPath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';
 	terminal.show(false)
-	terminal.sendText('if ($null -eq (Get-Module ALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking}');
+	terminal.sendText('if ($null -eq (Get-Module ALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking 3>$null}');
 
 	PSPath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';
 	terminal.show(false)
-	terminal.sendText('if ($null -eq (Get-Module NPALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking}');
+	terminal.sendText('if ($null -eq (Get-Module NPALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking 3>$null}');
 
 	return terminal;
 }
@@ -567,7 +567,6 @@ export async function getRunnerParams(command: string): Promise<types.ALTestAsse
 		}
 
 		terminal = getALTestRunnerTerminal(getTerminalName());
-		terminal.sendText(' ');
 		terminal.show(true);
 		terminal.sendText('cd "' + getTestFolderPath() + '"');
 		invokeCommand(config.preTestCommand);
