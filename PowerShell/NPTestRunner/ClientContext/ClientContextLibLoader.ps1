@@ -8,11 +8,11 @@ Push-Location
 $libsPath = Get-VSCodeExtensionClientContextLibsRootPath
 $libsPath = Join-Path $libsPath $BcLibVersion
 
-if (!(Test-Path $libsPath)) {
-    throw "Client Session libraries for $BcLibVersion are not present. Try to download them."
-}
-
 try {
+
+    if (!(Test-Path $libsPath)) {
+        throw "Client Session libraries for $BcLibVersion are not present. Try to download them."
+    }    
 
     Set-Location $PSScriptRoot
 
@@ -21,12 +21,11 @@ try {
         [void][Reflection.Assembly]::LoadFrom($_) 
     }    
 
-
     Import-Module .\ClientContext.psm1
     . .\ClientContextLibLoaderHelper.ps1
 } 
 catch {
-    
+    throw "Problems during initialization of the Client Context. Details: $($_.Exception)"
 }
 finally {
     Pop-Location
