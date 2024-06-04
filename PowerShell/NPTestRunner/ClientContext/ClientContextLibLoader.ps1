@@ -8,6 +8,10 @@ Push-Location
 $libsPath = Get-VSCodeExtensionClientContextLibsRootPath
 $libsPath = Join-Path $libsPath $BcLibVersion
 
+if (!(Test-Path $libsPath)) {
+    throw "Client Session libraries for $BcLibVersion are not present. Try to download them."
+}
+
 try {
 
     Set-Location $PSScriptRoot
