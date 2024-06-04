@@ -434,6 +434,8 @@ export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
 		terminal = vscode.window.createTerminal(terminalName);
 	}
 
+	terminal.sendText('$ErrorActionPreference = "Stop"');
+
 	let PSPath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';
 	terminal.show(false)
 	terminal.sendText('if ($null -eq (Get-Module ALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking}');
