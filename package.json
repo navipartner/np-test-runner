@@ -16,7 +16,7 @@
 	"files": [
 		"PowerShell/"
 	],
-	"version": "0.22.5",
+	"version": "0.23.0",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -132,6 +132,11 @@
 			{
 				"command": "altestrunner.showPerformanceProfile",
 				"title": "Show Performance Profile",
+				"category": "NP AL Test Runner"
+			},
+			{
+				"command": "altestrunner.downloadClientSessionLibraries",
+				"title": "Download BC Client Session libraries",
 				"category": "NP AL Test Runner"
 			}
 		],
@@ -405,7 +410,9 @@
 		"sanitize-filename": "^1.6.3",
 		"xml2js": "^0.5.0",
 		"@vscode/extension-telemetry": "0.5.0",
-		"node-powershell": "^5.0.1"
+		"node-powershell": "^5.0.1",
+		"xmldom": "^0.6.0",
+		"@types/node-fetch": "^2.6.11"
 	},
 	"__metadata": {
 		"id": "81e06a9c-e97a-4474-b24e-a1f1c2683fe4",
