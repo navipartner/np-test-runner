@@ -17,7 +17,7 @@ try {
     }    
 
 
-    Import-Module .\ClientContext.psm1 -Global
+    Import-Module .\ClientContext.psm1
     . .\ClientContextLibLoaderHelper.ps1
 } 
 catch {

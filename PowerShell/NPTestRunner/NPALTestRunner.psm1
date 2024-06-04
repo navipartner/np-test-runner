@@ -6,14 +6,14 @@ enum BcArtifactSource {
     Insider
 }
 
-#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psd1) -Global
-#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psm1) -Global
+#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psd1)
+#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psm1)
 #. "$PSScriptRoot\ClientContext\ClientContextLibLoader.ps1" -BcLibVersion (Get-SelectedBcVersion)
-Import-Module (Join-Path $PSScriptRoot EntraIdAuth\EntraIdAuth.psm1) -Global
-Import-Module (Join-Path $PSScriptRoot ALTestRunnerInternal.psm1) -Global
-Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1) -Global
-#Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psd1) -Global
-#Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psm1) -Global
+Import-Module (Join-Path $PSScriptRoot EntraIdAuth\EntraIdAuth.psm1)
+Import-Module (Join-Path $PSScriptRoot ALTestRunnerInternal.psm1)
+Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1)
+#Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psd1)
+#Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psm1)
 
 function Invoke-NPALTests {
     [CmdletBinding()]
@@ -47,27 +47,24 @@ function Invoke-NPALTests {
 
     Test-ServiceIsRunningAndHealthy
 
-    #Import-ClientContextModule -Version (Get-SelectedBcVersion) 
+    # Let's check version and already loaded modules (if any) and eventually load/import ClientContext assemblies and types.
     $Version = Get-SelectedBcVersion
-    if ($global:ClientContextLoadedModuleVersion) {
-        if ($global:ClientContextLoadedModuleVersion -eq $Version) {
-            return
+    if ($global:ClientContextLoadedModuleVersion -ne $Version) {
+        
+        Push-Location
+
+        try {        
+            Set-Location $PSScriptRoot
+            . (Join-Path $PSScriptRoot -ChildPath 'ClientContext' -AdditionalChildPath 'ClientContextLibLoader.ps1') -BcLibVersion $Version
+            . (Join-Path $PSScriptRoot 'ClientSessionLibLoader.ps1')
+            $global:ClientContextLoadedModuleVersion = $Version
         }
-    }
-
-    Push-Location
-
-    try {
-        Set-Location $PSScriptRoot
-        . (Join-Path $PSScriptRoot -ChildPath 'ClientContext' -AdditionalChildPath 'ClientContextLibLoader.ps1') -BcLibVersion $Version
-        . (Join-Path $PSScriptRoot 'ClientSessionLibLoader.ps1')
-        $global:ClientContextLoadedModuleVersion = $Version
-    }
-    catch {
-        Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
-    }
-    finally {
-        Pop-Location
+        catch {
+            Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
+        }
+        finally {
+            Pop-Location
+        }
     }
 
     switch ($environmentType) {
@@ -309,12 +306,10 @@ function Test-ServiceIsRunningAndHealthy {
             if ((!$healthCheckResult) -or ($healthCheckResult.StatusCode -ne 200)) {
                 throw "$serviceUrl is not available. Please start the container, or check NST, eventually retry."
             }
-            return $true
         }
         Default {
             # For SaaS Sandboxes we don't have any method without authentication so we have to be authenticated first.
             # So let's consider the environment is up and user knows about the real state before development and testing.
-            return $true
         }
     }
 }
