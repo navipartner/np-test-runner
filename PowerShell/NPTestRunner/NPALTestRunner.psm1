@@ -408,7 +408,7 @@ function Get-ClientSessionLibrariesFromBcArtifacts {
         $null = New-Item -Path $destPath -ItemType Directory -Force
     }
 
-    Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'Applications\testframework\TestRunner\Internal\*.dll'"
+    Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'?pplications\*\?est?unner\?nternal\*.dll'"
 }
 
 function Import-ClientContextModule {
