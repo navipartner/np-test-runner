@@ -389,6 +389,9 @@ function Invoke-RipUnzip {
     $ripUnzipPath = Get-RipUnzipExeFilePath
     $cmd = "$ripUnzipPath unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
     Invoke-Expression -Command $cmd
+    if (!($?)) {
+        throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
+    }
 }
 
 function Get-ClientSessionLibrariesFromBcArtifacts {
@@ -660,7 +663,5 @@ function Test-BcAuthContext {
 
 
 $Global:ExtensionSystemFolderPath = Get-ALTestRunnerConfigPath -ReturnFolderPath
-$global:SelectedBcVersion = Get-SelectedBcVersion
-$Global:ClientSessionLibsPath = Get-SelectedBcVersionLibPath
 
 Export-ModuleMember -Function *
