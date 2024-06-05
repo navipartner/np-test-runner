@@ -447,6 +447,28 @@ export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
 	return terminal;
 }
 
+// Reloading isn't as easy as might look. Let's keep the function but due to the unknown state of terminal
+// it's harder to know when it's safe to close it and create a new one.
+export function reloadTerminal(terminalName: string): vscode.Terminal {
+	sendDebugEvent('reloadTerminal-start', { terminalName: terminalName });
+
+	let terminals = vscode.window.terminals.filter(element => element.name === terminalName);
+	let terminal;
+	if (terminals) {
+		terminal = terminals.shift()!;
+	}
+
+	if (terminal) {
+		sendDebugEvent('reloadTerminal-closeTerminal', { terminalName: terminalName });
+		terminal.hide();
+		terminal.dispose();
+		sendDebugEvent('reloadTerminal-terminalClosed', { terminalName: terminalName });
+	}
+
+	sendDebugEvent('reloadTerminal-createNewTerminal', { terminalName: terminalName });
+	return getALTestRunnerTerminal(terminalName);
+}
+
 export async function executeCommandInTerminal(command: string, terminal?: vscode.Terminal) {
     // Get the dedicated/default terminal    
     if (!terminal) {
