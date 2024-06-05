@@ -469,26 +469,6 @@ export function reloadTerminal(terminalName: string): vscode.Terminal {
 	return getALTestRunnerTerminal(terminalName);
 }
 
-export async function executeCommandInTerminal(command: string, terminal?: vscode.Terminal) {
-    // Get the dedicated/default terminal    
-    if (!terminal) {
-        terminal = getALTestRunnerTerminal(getTerminalName());
-    }
-
-    // Send the command to the terminal
-    terminal.sendText(command);
-
-    // Wait for a moment before reading the output
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Read the output from the terminal process
-	
-    //const output = terminal.process!.readData();
-	//process!
-    // Do something with the output (e.g., parse or display it)
-    //console.log('Terminal output:', output);
-}
-
 export function getExtension() {
 	return vscode.extensions.getExtension('navipartner.np-al-test-runner');
 }
