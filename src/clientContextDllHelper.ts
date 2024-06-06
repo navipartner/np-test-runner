@@ -171,7 +171,7 @@ export async function downloadClientSessionLibraries() : Promise<InvocationResul
 				return restult;
 			}).catch((error) => {
 				vscode.window.showErrorMessage(`Client session libraries haven't been downloaded. Additional details: ${error}`);
-			})			
+			});
 	
 			return new Promise<void>((resolve) => {
 				resolve();
