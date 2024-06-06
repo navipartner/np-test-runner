@@ -1,13 +1,9 @@
 import * as vscode from 'vscode';
 import * as types from './types';
-import { getALTestRunnerTerminal, getTerminalName, invokePowerShellCmd } from './extension';
-import { getCurrentWorkspaceConfig } from './config';
+import { invokePowerShellCmd } from './extension';
 import * as fetch from 'node-fetch'; 
 import { DOMParser } from 'xmldom';
-import { awaitFileExistence } from './file';
 import { InvocationResult } from 'node-powershell';
-
-let terminal: vscode.Terminal;
 
 async function fetchVersions(sourceUrl: string, filter: string): Promise<string[]> {
     let requestUrl = `${sourceUrl}?comp=list&restype=container`;
