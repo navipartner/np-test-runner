@@ -46,17 +46,9 @@ export function setALTestRunnerConfig(keyName: string, keyValue: string | undefi
 
 function createALTestRunnerConfig() {
 	let config: types.ALTestRunnerConfig = {
-		containerResultPath: "",
 		launchConfigName: "",
-		securePassword: "",
-		userName: "",
 		companyName: "",
 		testSuiteName: "",
-		vmUserName: "",
-		vmSecurePassword: "",
-		remoteContainerName: "",
-		dockerHost: "",
-		newPSSessionOptions: "",
 		testRunnerServiceUrl: "",
 		codeCoveragePath: ".//.altestrunner//codecoverage.json",
 		culture: "en-US"

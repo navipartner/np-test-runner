@@ -16,7 +16,7 @@
 	"files": [
 		"PowerShell/"
 	],
-	"version": "0.23.0",
+	"version": "0.24.0",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -82,21 +82,6 @@
 			{
 				"command": "altestrunner.clearTestResults",
 				"title": "Clear Test Results",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "altestrunner.clearCredentials",
-				"title": "Clear Credentials",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "altestrunner.setContainerCredential",
-				"title": "Set Container Credential",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "altestrunner.setVMCredential",
-				"title": "Set VM Credential",
 				"category": "NP AL Test Runner"
 			},
 			{
@@ -401,18 +386,17 @@
 		"mocha": "^10.2.0",
 		"sinon": "^7.5.0",
 		"tslint": "^5.20.1",
-		"typescript": "^4.6.3",
-		"@vscode/test-electron": "^2.3.9",
-		"node-powershell": "^5.0.1"
+		"typescript": "^4.6.3"
 	},
 	"dependencies": {
+		"@types/node-fetch": "^2.6.11",
 		"@types/xml2js": "^0.4.9",
+		"@vscode/extension-telemetry": "0.5.0",
+		"node-fetch": "^2.7.0",
+		"node-powershell": "^5.0.1",
 		"sanitize-filename": "^1.6.3",
 		"xml2js": "^0.5.0",
-		"@vscode/extension-telemetry": "0.5.0",
-		"node-powershell": "^5.0.1",
-		"xmldom": "^0.6.0",
-		"@types/node-fetch": "^2.6.11"
+		"xmldom": "^0.6.0"
 	},
 	"__metadata": {
 		"id": "81e06a9c-e97a-4474-b24e-a1f1c2683fe4",

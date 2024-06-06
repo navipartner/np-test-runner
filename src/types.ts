@@ -2,16 +2,8 @@ import * as vscode from 'vscode';
 
 export type ALTestRunnerConfig = {
 	launchConfigName: string;
-	containerResultPath: string;
-	userName: string;
-	securePassword: string;
 	companyName: string;
 	testSuiteName: string;
-	vmUserName: string;
-	vmSecurePassword: string;
-	remoteContainerName: string;
-	dockerHost: string;
-	newPSSessionOptions: string;
 	testRunnerServiceUrl: string;
 	codeCoveragePath: string;
 	culture: string;

@@ -11,11 +11,6 @@ function New-ALTestRunnerConfigFile {
     Set-Content -Path $Path -Value '{
         "launchConfigName": "",
         "containerResultPath": "",
-        "userName": "",
-        "securePassword": "",
-        "vmUserName": "",
-        "vmSecurePassword": "",
-        "remoteContainerName": "",
         "dockerHost": "",
         "newPSSessionOptions": ""
     }'

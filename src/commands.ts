@@ -57,28 +57,6 @@ export function registerCommands(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('AL Test Runner results cleared');
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('altestrunner.clearCredentials', async () => {
-		setALTestRunnerConfig('userName', '');
-		setALTestRunnerConfig('securePassword', '');
-		vscode.window.showInformationMessage('AL Test Runner credentials cleared');
-	}));
-
-	context.subscriptions.push(vscode.commands.registerCommand('altestrunner.setContainerCredential', () => {
-		setALTestRunnerConfig('userName', '');
-		setALTestRunnerConfig('securePassword', '');
-		let terminal = getALTestRunnerTerminal(getTerminalName());
-		terminal.sendText(' ');
-		terminal.sendText('Get-ALTestRunnerCredential');
-	}));
-
-	context.subscriptions.push(vscode.commands.registerCommand('altestrunner.setVMCredential', () => {
-		setALTestRunnerConfig('vmUserName', '');
-		setALTestRunnerConfig('vmSecurePassword', '');
-		let terminal = getALTestRunnerTerminal(getTerminalName());
-		terminal.sendText(' ');
-		terminal.sendText('Get-ALTestRunnerCredential -VM');
-	}));
-
 	context.subscriptions.push(vscode.commands.registerCommand('altestrunner.openConfigFile', async () => {
 		getALTestRunnerConfig();
 		vscode.window.showTextDocument(await vscode.workspace.openTextDocument(getALTestRunnerConfigPath()));

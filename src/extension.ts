@@ -238,14 +238,6 @@ export async function attachDebugger() {
 	await vscode.debug.startDebugging(vscode.workspace.workspaceFolders![0], attachConfig);
 }
 
-function invokeCommand(command: string) {
-	if (command === undefined || command === null || command === '') {
-		return;
-	}
-
-	invokePowerShellCmd('Invoke-Script {' + command + '}');
-}
-
 function getDocumentWorkspaceFolder(): string | undefined {
 	const fileName = vscode.window.activeTextEditor?.document.fileName;
 	return vscode.workspace.workspaceFolders
