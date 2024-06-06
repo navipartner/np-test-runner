@@ -21,6 +21,7 @@ import { createPerformanceStatusBarItem } from './performance';
 import { showSimpleQuickPick, showArtifactVersionQuickPick, getBcArtifactsUrl } from './clientContextDllHelper';
 import { PowerShell, InvocationResult } from 'node-powershell';
 
+let terminal: vscode.Terminal;
 var powershellSession = null;
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
@@ -443,36 +444,12 @@ export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
 	terminal.sendText('$ErrorActionPreference = "Stop"');
 
 	let PSPath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';
-	terminal.show(false)
 	terminal.sendText('if ($null -eq (Get-Module ALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking 3>$null}');
 
 	PSPath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';
-	terminal.show(false)
 	terminal.sendText('if ($null -eq (Get-Module NPALTestRunner)) {Import-Module "' + PSPath + '" -DisableNameChecking 3>$null}');
 
 	return terminal;
-}
-
-// Reloading isn't as easy as might look. Let's keep the function but due to the unknown state of terminal
-// it's harder to know when it's safe to close it and create a new one.
-export function reloadTerminal(terminalName: string): vscode.Terminal {
-	sendDebugEvent('reloadTerminal-start', { terminalName: terminalName });
-
-	let terminals = vscode.window.terminals.filter(element => element.name === terminalName);
-	let terminal;
-	if (terminals) {
-		terminal = terminals.shift()!;
-	}
-
-	if (terminal) {
-		sendDebugEvent('reloadTerminal-closeTerminal', { terminalName: terminalName });
-		terminal.hide();
-		terminal.dispose();
-		sendDebugEvent('reloadTerminal-terminalClosed', { terminalName: terminalName });
-	}
-
-	sendDebugEvent('reloadTerminal-createNewTerminal', { terminalName: terminalName });
-	return getALTestRunnerTerminal(terminalName);
 }
 
 export function getExtension() {
