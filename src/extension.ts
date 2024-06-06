@@ -21,7 +21,6 @@ import { createPerformanceStatusBarItem } from './performance';
 import { showSimpleQuickPick, showArtifactVersionQuickPick, getBcArtifactsUrl } from './clientContextDllHelper';
 import { PowerShell, InvocationResult } from 'node-powershell';
 
-let terminal: vscode.Terminal;
 var powershellSession = null;
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
@@ -168,13 +167,28 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 			unlinkSync(getLastResultPath());
 		}
 
-		terminal = getALTestRunnerTerminal(getTerminalName());
-		terminal.sendText(' ');
-		terminal.show(true);
-		terminal.sendText('cd "' + getTestFolderPath() + '"');
-		invokeCommand(config.preTestCommand);
-		terminal.sendText(command);
-		invokeCommand(config.postTestCommand);
+		await invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
+		await invokePowerShellCmd(config.preTestCommand);
+
+		vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: `Running tests`,
+			cancellable: true
+		}, async (progress, token) => {
+			progress.report({ message: "Working ..." });
+				
+			await invokePowerShellCmd(command).then((restult) => {
+				//return restult;
+			}).catch((error) => {
+				vscode.window.showErrorMessage(`Test execution failed. Additional details: ${error}`);
+			});
+	
+			return new Promise<void>((resolve) => {
+				resolve();
+			});
+		});
+
+		await invokePowerShellCmd(config.postTestCommand);
 
 		awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
 			if (resultsAvailable) {
@@ -199,19 +213,13 @@ async function readTestResults(uri: vscode.Uri): Promise<types.ALTestAssembly[]>
 }
 
 export function initDebugTest(filename: string) {
-	terminal = getALTestRunnerTerminal(getTerminalName());
-	terminal.sendText(' ');
-	terminal.show(true);
-	terminal.sendText('cd "' + getTestFolderPath() + '"');
-	terminal.sendText('Invoke-TestRunnerService -FileName "' + filename + '" -Init');
+	invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
+	invokePowerShellCmd('Invoke-TestRunnerService -FileName "' + filename + '" -Init');
 }
 
 export function invokeDebugTest(filename: string, selectionStart: number) {
-	terminal = getALTestRunnerTerminal(getTerminalName());
-	terminal.sendText(' ');
-	terminal.show(true);
-	terminal.sendText('cd "' + getTestFolderPath() + '"');
-	terminal.sendText('Invoke-TestRunnerService -FileName "' + filename + '" -SelectionStart ' + selectionStart);
+	invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
+	invokePowerShellCmd('Invoke-TestRunnerService -FileName "' + filename + '" -SelectionStart ' + selectionStart);
 }
 
 export async function attachDebugger() {
@@ -235,9 +243,7 @@ function invokeCommand(command: string) {
 		return;
 	}
 
-	terminal.sendText(' ');
-	terminal.sendText('Invoke-Script {' + command + '}');
-	terminal.sendText(' ');
+	invokePowerShellCmd('Invoke-Script {' + command + '}');
 }
 
 function getDocumentWorkspaceFolder(): string | undefined {
@@ -250,36 +256,40 @@ function getDocumentWorkspaceFolder(): string | undefined {
 export async function invokePowerShellCmd(command: string) : Promise<any> {
 
 	if (powershellSession === null) {
-		powershellSession = new PowerShell({
-			executableOptions: {
-				"pwsh.exe": "",
-				'-NoLogo': true,
-				'-NoExit': true,
-				'-Command': '-'
-			}
-		});
+		try {
+			powershellSession = new PowerShell({
+				executableOptions: {
+					"pwsh.exe": "",
+					'-NoLogo': true,
+					'-NoExit': true,
+					'-Command': '-'
+				}
+			});
 
-		await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
-			console.log(result);
-		})).catch((error) => {
-			console.log(error);
-			vscode.window.showErrorMessage(error);
-		});
+			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
+				console.log(result);
+			})).catch((error) => {
+				console.log(error);
+				vscode.window.showErrorMessage(error);
+			});
 
-		let alTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';	
-		await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).catch((error) => {
-			vscode.window.showErrorMessage(error);
-		});
+			let alTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';	
+			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).catch((error) => {
+				vscode.window.showErrorMessage(error);
+			});
 
-		let npAlTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';		
-		await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).catch((error) => {
-			vscode.window.showErrorMessage(error);
-		});
-		
-		let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
-		await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).catch((error) => {
-			vscode.window.showErrorMessage(error);
-		});
+			let npAlTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';		
+			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).catch((error) => {
+				vscode.window.showErrorMessage(error);
+			});
+			
+			let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
+			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).catch((error) => {
+				vscode.window.showErrorMessage(error);
+			});
+		} catch {
+			powershellSession = null;
+		}
 	}
 
 	return powershellSession.invoke(command);
@@ -572,12 +582,10 @@ export async function getRunnerParams(command: string): Promise<types.ALTestAsse
 			unlinkSync(getLastResultPath());
 		}
 
-		terminal = getALTestRunnerTerminal(getTerminalName());
-		terminal.show(true);
-		terminal.sendText('cd "' + getTestFolderPath() + '"');
-		invokeCommand(config.preTestCommand);
-		terminal.sendText(command);
-		invokeCommand(config.postTestCommand);
+		invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
+		invokePowerShellCmd(config.preTestCommand);
+		invokePowerShellCmd(command);
+		invokePowerShellCmd(config.postTestCommand);
 
 		awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
 			if (resultsAvailable) {
