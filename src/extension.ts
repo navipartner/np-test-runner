@@ -19,10 +19,10 @@ import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
 import { showSimpleQuickPick, showArtifactVersionQuickPick, getBcArtifactsUrl } from './clientContextDllHelper';
-//import { PowerShell, InvocationResult } from 'node-powershell';
+import { PowerShell, InvocationResult } from 'node-powershell';
 
 let terminal: vscode.Terminal;
-//let powershellSession = new PowerShell();
+var powershellSession = null;
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
 const config = vscode.workspace.getConfiguration('al-test-runner');
@@ -240,25 +240,6 @@ function invokeCommand(command: string) {
 	terminal.sendText(' ');
 }
 
-/*
-export function invokePowerShellCommand(command: string, errorOnFailure: Boolean) : vscode.Terminal {
-	terminal = getALTestRunnerTerminal(getTerminalName());
-	terminal.sendText(' ');
-	terminal.sendText('Invoke-Script {' + command + '}');
-	terminal.sendText(' ');
-
-	if (errorOnFailure) {
-		if (terminal.exitStatus && terminal.exitStatus.code) {
-			vscode.window.showInformationMessage(`Exit code: ${terminal.exitStatus.code}`);
-			if (terminal.exitStatus.code != 0) {
-				throw new Error(`Exit code: ${terminal.exitStatus.code}`);
-			}
-		}
-	}
-	return terminal;
-}
-
-/*
 function getDocumentWorkspaceFolder(): string | undefined {
 	const fileName = vscode.window.activeTextEditor?.document.fileName;
 	return vscode.workspace.workspaceFolders
@@ -266,20 +247,43 @@ function getDocumentWorkspaceFolder(): string | undefined {
 		.filter((fsPath) => fileName?.startsWith(fsPath))[0];
 }
 
-export async function invokePowerShellCommandViaNodePowershell(command: string) : Promise<InvocationResult> {
-	
-	let alTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';	
-	powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`);
+export async function invokePowerShellCmd(command: string) : Promise<any> {
 
-	let npAlTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';		
-	powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`);
-	
-	let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
-	powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`);	
+	if (powershellSession === null) {
+		powershellSession = new PowerShell({
+			executableOptions: {
+				"pwsh.exe": "",
+				'-NoLogo': true,
+				'-NoExit': true,
+				'-Command': '-'
+			}
+		});
+
+		await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
+			console.log(result);
+		})).catch((error) => {
+			console.log(error);
+			vscode.window.showErrorMessage(error);
+		});
+
+		let alTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';	
+		await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).catch((error) => {
+			vscode.window.showErrorMessage(error);
+		});
+
+		let npAlTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';		
+		await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).catch((error) => {
+			vscode.window.showErrorMessage(error);
+		});
+		
+		let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
+		await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).catch((error) => {
+			vscode.window.showErrorMessage(error);
+		});
+	}
 
 	return powershellSession.invoke(command);
 }
-*/
 
 export function getSmbAlExtension() : vscode.Extension<any> {
 	let ext = vscode.extensions.getExtension('ms-dynamics-smb.al');

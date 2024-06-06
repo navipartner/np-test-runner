@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as types from './types';
-import { getALTestRunnerTerminal, getTerminalName } from './extension';
+import { getALTestRunnerTerminal, getTerminalName, invokePowerShellCmd } from './extension';
 import { getCurrentWorkspaceConfig } from './config';
 import * as fetch from 'node-fetch'; 
 import { DOMParser } from 'xmldom';
 import { awaitFileExistence } from './file';
+import { InvocationResult } from 'node-powershell';
 
 let terminal: vscode.Terminal;
 
@@ -145,7 +146,7 @@ export function getBcArtifactsUrl(artifactsSource: types.BcArtifactSource, artif
     return null;
 }
 
-export async function downloadClientSessionLibraries() : Promise<Boolean> {   
+export async function downloadClientSessionLibraries() : Promise<InvocationResult> {
 	const artifactSource = await showSimpleQuickPick([types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider]);
 	if (!artifactSource) {
 		return;
@@ -159,11 +160,22 @@ export async function downloadClientSessionLibraries() : Promise<Boolean> {
 		const versionOnly = selectedVersion.split('/')[0];	
 		let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
 		
-		terminal = getALTestRunnerTerminal(getTerminalName());
-		terminal.show(false);
-		terminal.sendText(command);
-
-		//return awaitFileExistence(getLastResultPath(), 0);
-		return new Promise<boolean>(resolve => { resolve(true); });
+		vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: `Downloading client session libraries for BC ${versionOnly} ...`,
+			cancellable: true
+		}, async (progress, token) => {
+			progress.report({ message: "Working ..." });
+				
+			await invokePowerShellCmd(command).then((restult) => {
+				return restult;
+			}).catch((error) => {
+				vscode.window.showErrorMessage(`Client session libraries haven't been downloaded. Additional details: ${error}`);
+			})			
+	
+			return new Promise<void>((resolve) => {
+				resolve();
+			});
+		});
 	}
 }
