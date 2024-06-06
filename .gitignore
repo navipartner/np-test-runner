@@ -5,3 +5,4 @@ node_modules
 .vscode/
 .altestrunner
 run.test.*.ps1
+*.cpuprofile
