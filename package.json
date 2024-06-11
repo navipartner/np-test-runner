@@ -288,7 +288,7 @@
 						"type": "string",
 						"scope": "resource",
 						"description": "The path to the JSON file which has details of the code coverage for this project",
-						"default": "../tests/.altestrunner/codecoverage.json"
+						"default": "./.altestrunner/codecoverage.json"
 					},
 					"al-test-runner.codeCoverageExcludeFiles": {
 						"type": "string",
