@@ -224,7 +224,7 @@ function Get-ServiceUrlCredentialCacheKey {
             if (-not ([string]::IsNullOrEmpty($port))) {
                 $serviceUrl = "$serviceUrl`:$port"
             }
-            $serviceUrl = ([System.Uri]$serviceUrl).AbsoluteUri.TrimEnd('/')
+            $serviceUrl = ([System.Uri]$serviceUrl).AbsoluteUri
             $serviceUrl = "$serviceUrl`_$serverInstance"
             <# The 'UserPasswordCache.dat' file contains entries without tenant id so let's remove the next code:
             if ((-not ([string]::IsNullOrEmpty($tenant))) -and ($tenant -ne 'default')) {
@@ -387,10 +387,22 @@ function Invoke-RipUnzip {
     )
     
     $ripUnzipPath = Get-RipUnzipExeFilePath
-    $cmd = "$ripUnzipPath unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
-    Invoke-Expression -Command $cmd
-    if (!($?)) {
-        throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
+    $ripUnzipFolderPath = Split-Path $ripUnzipPath
+    $ripUnzipExe = Split-Path $ripUnzipPath -Leaf
+    
+    $null = Push-Location
+    
+    try {
+        $null = Set-Location $ripUnzipFolderPath
+        $cmd = "$ripUnzipExe unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
+        Invoke-Expression -Command $cmd
+        if (!($?)) {
+            throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
+        }
+    } catch {
+        throw $_.Exception
+    } finally {
+        $null = Pop-Location
     }
 }
 
@@ -546,7 +558,16 @@ function Get-ALDevCacheFileContent {
         $credentialReader = [ALCredentialCacheLibrary.ALCredentailCacheReader]
     }
 
-    $SmbAlExtBinPath = Join-Path $SmbAlExtPath '\bin\win32\'
+    $os = $PSVersionTable.OS
+    if ($os) {
+        if ($os.ToLower().Contains('windows')) {
+            $SmbAlExtBinPath = Join-Path $SmbAlExtPath '\bin\win32\'
+        } else {
+            $SmbAlExtBinPath = Join-Path $SmbAlExtPath '/bin/linux'
+        }
+    } else {
+        $SmbAlExtBinPath = Join-Path $SmbAlExtPath '\bin\win32\'
+    }
     $smbAlCacheFilePath = Join-Path $SmbAlExtBinPath $FileName
     
     if (-not (Test-Path $smbAlCacheFilePath)) {

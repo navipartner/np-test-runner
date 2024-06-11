@@ -4,14 +4,15 @@ import { sendDebugEvent } from './telemetry';
 import * as types from './types';
 import { getTestFolderPath } from './alFileHelper';
 import { activeEditor } from './extension';
+import * as path from 'path';
 
 export function getALTestRunnerPath(): string {
-	const alTestRunnerPath = getTestFolderPath() + '\\.altestrunner';
+	const alTestRunnerPath = path.join(getTestFolderPath(), '.altestrunner');
 	return alTestRunnerPath;
 }
 
 export function getALTestRunnerConfigPath(): string {
-	return getALTestRunnerPath() + '\\config.json';
+	return path.join(getALTestRunnerPath(), 'config.json');
 }
 
 export function getALTestRunnerConfig() {

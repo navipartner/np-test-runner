@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { readFileSync, existsSync, unlinkSync } from 'fs';
 import * as xml2js from 'xml2js';
 import * as types from './types';
-import { CodelensProvider } from './codeLensProvider';
+import { CodelensProvider } from './codelensProvider';
 import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from './coverage';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument } from './alFileHelper';
 import { getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath } from './config';
@@ -19,10 +19,12 @@ import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
 import { showSimpleQuickPick, showArtifactVersionQuickPick, getBcArtifactsUrl } from './clientContextDllHelper';
-import { PowerShell, InvocationResult } from 'node-powershell';
+import { PowerShell, PowerShellOptions, PSExecutableType, InvocationResult, InvocationError } from 'node-powershell';
+import * as path from 'path';
 
 let terminal: vscode.Terminal;
 var powershellSession = null;
+var powershellSessionReady = false;
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
 const config = vscode.workspace.getConfiguration('al-test-runner');
@@ -168,7 +170,7 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 			unlinkSync(getLastResultPath());
 		}
 
-		await invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
+		await invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
 		await invokePowerShellCmd(config.preTestCommand);
 
 		vscode.window.withProgress({
@@ -178,10 +180,10 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 		}, async (progress, token) => {
 			progress.report({ message: "Working ..." });
 				
-			await invokePowerShellCmd(command).then((restult) => {
-				//return restult;
+			await invokePowerShellCmd(command).then((result) => {
+
 			}).catch((error) => {
-				vscode.window.showErrorMessage(`Test execution failed. Additional details: ${error}`);
+				vscode.window.showErrorMessage(`Test execution failed`, error);
 			});
 	
 			return new Promise<void>((resolve) => {
@@ -214,12 +216,12 @@ async function readTestResults(uri: vscode.Uri): Promise<types.ALTestAssembly[]>
 }
 
 export function initDebugTest(filename: string) {
-	invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
+	invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
 	invokePowerShellCmd('Invoke-TestRunnerService -FileName "' + filename + '" -Init');
 }
 
 export function invokeDebugTest(filename: string, selectionStart: number) {
-	invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
+	invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
 	invokePowerShellCmd('Invoke-TestRunnerService -FileName "' + filename + '" -SelectionStart ' + selectionStart);
 }
 
@@ -247,17 +249,26 @@ function getDocumentWorkspaceFolder(): string | undefined {
 }
 
 export async function invokePowerShellCmd(command: string) : Promise<any> {
+	
+	if ((command === null) || (command == '')) {
+		return new Promise((resolve) => {
+			resolve(null);
+		})
+	}
 
 	if (powershellSession === null) {
 		try {
-			powershellSession = new PowerShell({
+			let powershellOptions : PowerShellOptions = {
+				executable: PSExecutableType.PowerShellCore,
+				throwOnInvocationError: true,
 				executableOptions: {
-					"pwsh.exe": "",
 					'-NoLogo': true,
 					'-NoExit': true,
-					'-Command': '-'
+					"-NonInteractive": true
 				}
-			});
+			}
+
+			powershellSession = new PowerShell(powershellOptions);
 
 			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
 				console.log(result);
@@ -266,26 +277,103 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 				vscode.window.showErrorMessage(error);
 			});
 
-			let alTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\ALTestRunner.psm1';	
-			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).catch((error) => {
+			let alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
+			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).then((result) => {
+				console.log(result);
+			}).catch((error) => {
 				vscode.window.showErrorMessage(error);
 			});
 
-			let npAlTestRunnerModulePath = getExtension()!.extensionPath + '\\PowerShell\\NPTestRunner\\NPALTestRunner.psm1';		
-			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).catch((error) => {
+			let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
+			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).then((result) => {
+				console.log(result);
+			}).catch((error) => {
 				vscode.window.showErrorMessage(error);
 			});
 			
 			let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
-			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).catch((error) => {
+			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).then((result) => {
+				console.log(result);
+			}).catch((error) => {
 				vscode.window.showErrorMessage(error);
 			});
-		} catch {
-			powershellSession = null;
+		} catch(e) {
+			if (powershellSession) {
+				await powershellSession.dispose();
+				powershellSession = null;
+			}
+			throw e;
 		}
 	}
 
-	return powershellSession.invoke(command);
+	console.log(command);
+	await powershellSession.invoke(command).then((result) => {
+		console.log(result);
+		return result;
+	}).catch((error) => {
+		console.log(error);
+		const errorMsg = extractPowerShellError(error);
+		throw errorMsg;
+	});
+}
+
+async function checkAndLoadPowerShellModules() : Promise<void> {
+	if (powershellSession === null) {
+		try {					
+			let powershellOptions : PowerShellOptions = {
+				executable: PSExecutableType.PowerShellCore,
+				throwOnInvocationError: true,
+				executableOptions: {
+					'-NoLogo': true,
+					'-NoExit': true,
+					"-NonInteractive": true
+				}
+			}
+			powershellSession = new PowerShell(powershellOptions);
+
+			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
+				console.log(result);
+			})).catch((error) => {
+				console.log(error);
+				vscode.window.showErrorMessage(error);
+			});
+
+			let alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
+			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).then((result) => {
+				console.log(result);
+			}).catch((error) => {
+				vscode.window.showErrorMessage(error);
+			});
+
+			let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
+			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).then((result) => {
+				console.log(result);
+			}).catch((error) => {
+				vscode.window.showErrorMessage(error);
+			});
+			
+			let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
+			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).then((result) => {
+				console.log(result);
+			}).catch((error) => {
+				vscode.window.showErrorMessage(error);
+				//rejects(error);
+			});
+		} catch(e) {
+			powershellSession = null;
+			throw e;
+		}
+	} else {
+		return new Promise<void>((resolve) => {
+			resolve();
+		});
+	}
+}
+
+function extractPowerShellError(error: InvocationError) : string {
+	let errorMsg = error.message;
+	errorMsg = errorMsg.replaceAll('[31;1m', '').replaceAll('[0m', '')
+	return errorMsg;
 }
 
 export function getSmbAlExtension() : vscode.Extension<any> {
@@ -497,7 +585,7 @@ export function getLaunchJson() {
 
 export function getAppJsonKey(keyName: string) {
 	sendDebugEvent('getAppJsonKey-start', { keyName: keyName });
-	const appJsonPath = getTestFolderPath() + '\\app.json';
+	const appJsonPath = path.join(getTestFolderPath(), 'app.json');
 	const data = readFileSync(appJsonPath, { encoding: 'utf-8' });
 	const appJson = JSON.parse(data.charCodeAt(0) === 0xfeff
 		? data.slice(1) // Remove BOM
@@ -508,11 +596,15 @@ export function getAppJsonKey(keyName: string) {
 }
 
 export function getLastResultPath(): string {
-	return getALTestRunnerPath() + '\\last.xml';
+	return path.join(getALTestRunnerPath(), 'last.xml');
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() { }
+export function deactivate() {
+	if (powershellSession) {
+		powershellSession.dispose();
+	}
+ }
 
 export async function getRunnerParams(command: string): Promise<types.ALTestAssembly[]> {
 	return new Promise(async (resolve) => {
@@ -551,18 +643,23 @@ export async function getRunnerParams(command: string): Promise<types.ALTestAsse
 			unlinkSync(getLastResultPath());
 		}
 
-		invokePowerShellCmd('cd "' + getTestFolderPath() + '"');
-		invokePowerShellCmd(config.preTestCommand);
-		invokePowerShellCmd(command);
-		invokePowerShellCmd(config.postTestCommand);
-
-		awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
-			if (resultsAvailable) {
-				const results: types.ALTestAssembly[] = await readTestResults(vscode.Uri.file(getLastResultPath()));
-				resolve(results);
-
-				triggerUpdateDecorations();
-			}
+		invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`).then(() => {
+			return invokePowerShellCmd(config.preTestCommand);
+		}).then(() => {
+			return invokePowerShellCmd(command);
+		}).then(() => {
+			invokePowerShellCmd(config.postTestCommand);
+		}).then(() => {
+			awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
+				if (resultsAvailable) {
+					const results: types.ALTestAssembly[] = await readTestResults(vscode.Uri.file(getLastResultPath()));
+					resolve(results);
+	
+					triggerUpdateDecorations();
+				}
+			});
+		}).catch((error) => {
+			throw error;
 		});
 	});
 }
@@ -577,3 +674,90 @@ export async function invokeCommandFromAlDevExtension(command: string, params?: 
 
 	return vscode.commands.executeCommand(command, params);
 }
+
+//// NEW POWERSHELL INTEGRATION ///
+/*
+export async function invokePowerShellCmd(command: string) : Promise<any> {
+	// Don't process empty commands !!!
+	if ((command === null) || (command == '')) {
+		return new Promise((resolve) => {
+			resolve(null);
+		})
+
+	}
+
+	await checkAndLoadPowerShellModules().then((result) => {
+		console.log(result);
+	}).catch((error) => {
+		vscode.window.showErrorMessage(error);
+		rejects(error);
+	});
+
+	return await invokeCommand(command);
+}
+
+async function checkAndLoadPowerShellModules() : Promise<void> {
+	if ((powershellSessionReady) && (powershellSession !== null)) {
+		return new Promise<void>(() => {
+			resolve();
+		})
+	}
+
+	let powershellOptions : PowerShellOptions = {
+		executable: PSExecutableType.PowerShellCore,
+		throwOnInvocationError: true,
+		executableOptions: {
+			'-NoLogo': true,
+			'-NoExit': true,
+			"-NonInteractive": true
+		}
+	}
+	powershellSession = new PowerShell(powershellOptions);
+
+	await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result) => {
+		console.log(result);
+	}).catch((error) => {
+		console.log(`Error: ${error}`);
+		throw error;
+	});
+
+	const alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
+	await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).then((result) => {
+		console.log(result);
+	}).catch((error) => {
+		console.log(`Error: ${error}`);
+		throw error;
+	});
+
+	let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
+	await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).then((result) => {
+		console.log(result);
+	}).catch((error) => {
+		console.log(`Error: ${error}`);
+		throw error;
+	});
+
+	let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
+	await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).then((result) => {
+		console.log(result);
+	}).catch((error) => {
+		console.log(`Error: ${error}`);
+		throw error;
+	});
+
+	powershellSessionReady = true;
+
+	return new Promise<void>((resolve) => {
+		resolve();
+	})
+}
+
+async function invokeCommand(command : string) : Promise<InvocationResult> {
+	console.log(command);
+	return powershellSession.invoke(command).then((result) => {
+		resolve(result);
+	}).catch((error) => {
+		throw new Error(error);
+	});
+}
+*/
