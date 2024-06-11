@@ -387,10 +387,22 @@ function Invoke-RipUnzip {
     )
     
     $ripUnzipPath = Get-RipUnzipExeFilePath
-    $cmd = "$ripUnzipPath unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
-    Invoke-Expression -Command $cmd
-    if (!($?)) {
-        throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
+    $ripUnzipFolderPath = Split-Path $ripUnzipPath
+    $ripUnzipExe = Split-Path $ripUnzipPath -Leaf
+    
+    $null = Push-Location
+    
+    try {
+        $null = Set-Location $ripUnzipFolderPath
+        $cmd = "$ripUnzipExe unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
+        Invoke-Expression -Command $cmd
+        if (!($?)) {
+            throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
+        }
+    } catch {
+        throw $_.Exception
+    } finally {
+        $null = Pop-Location
     }
 }
 
