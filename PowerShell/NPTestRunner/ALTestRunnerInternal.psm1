@@ -273,7 +273,7 @@ function Setup-TestRun
     [string] $CodeCoverageTrackingType = 'Disabled',
     [ValidateSet('Disabled','PerCodeunit','PerTest')]
     [string] $ProduceCodeCoverageMap = 'Disabled',
-    [string] $CodeCoverageOutputPath = "$PSScriptRoot\CodeCoverage",
+    [string] $CodeCoverageOutputPath = (Join-Path $PSScriptRoot 'CodeCoverage'),
     [string] $CodeCoverageExporterId,
     [switch] $CodeCoverageTrackAllSessions,
     [bool] $StabilityRun
