@@ -224,7 +224,8 @@ function Get-ServiceUrlCredentialCacheKey {
             if (-not ([string]::IsNullOrEmpty($port))) {
                 $serviceUrl = "$serviceUrl`:$port"
             }
-            $serviceUrl = ([System.Uri]$serviceUrl).AbsoluteUri
+            $serviceUrl = ([System.Uri]$serviceUrl).AbsoluteUri.TrimEnd('/')
+            $serviceUrl = "$serviceUrl`.?"
             $serviceUrl = "$serviceUrl`_$serverInstance"
             <# The 'UserPasswordCache.dat' file contains entries without tenant id so let's remove the next code:
             if ((-not ([string]::IsNullOrEmpty($tenant))) -and ($tenant -ne 'default')) {
@@ -527,11 +528,14 @@ function Get-NavUserPasswordCredentials {
     if (!$creds) {
         throw "You should authenticate using standard AL dev approach. Then you can try again."
     }
-    $record = $creds.$WebClientUrl
 
-    if (!$record) {
+    $credsHashTable = @{}
+    $selectedCredCache = $creds | Where-Object { $_ -match $WebClientUrl }
+    $selectedCredCache.PSObject.Properties | ForEach-Object { $credsHashTable[$_.Name] = $_.Value }
+    if ($credsHashTable.Count -lt 1) {
         throw "You were not authenticated against $WebClientUrl yet or the cache has expired. Please, authenticate using the standard Microsoft AL development extension and try again."
     }
+    $record = $credsHashTable.Values[0]
 
     return $record
 }
