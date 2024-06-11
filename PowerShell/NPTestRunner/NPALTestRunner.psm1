@@ -368,7 +368,17 @@ function  Get-RipUnzipExeFilePath {
     )
 
     $vsCodeExtRootPath = Get-VSCodeExtensionRootPath
-    $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', 'ripunzip.exe'
+    if ($os) {
+        if ($os.ToLower().Contains('windows')) {
+            $ripUnzipExeFileName = 'ripunzip.exe'
+        } else {
+            $ripUnzipExeFileName = 'ripunzip'
+        }
+    } else {
+        $ripUnzipExeFileName = 'ripunzip.exe'
+    }
+    
+    $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', $ripUnzipExeFileName
 
     if (!(Test-Path $ripUnzipPath)) {
         throw "'ripunzip.exe' path $ripUnzipPath doesn't exist!"
