@@ -227,7 +227,7 @@ export async function runAllTests(extensionId?: string, extensionName?: string):
 
                 sendDebugEvent('runAllTests-ready');
 
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -ResultsFilePath ${resultsFilePath} -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
+                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -ResultsFilePath ${resultsFilePath}`);
                 resolve(results);
             }
             else {
@@ -257,7 +257,7 @@ export async function runSelectedTests(request: vscode.TestRunRequest, extension
                 const disabledTests = getDisabledTestsForRequest(request);
                 const disabledTestsJson = JSON.stringify(disabledTests);
 
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -DisabledTests ('${disabledTestsJson}'  -ResultsFilePath ${resultsFilePath} | ConvertFrom-Json) -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`)
+                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -DisabledTests ('${disabledTestsJson}'  -ResultsFilePath ${resultsFilePath} | ConvertFrom-Json)`);
                 resolve(results);
             }
             else {
