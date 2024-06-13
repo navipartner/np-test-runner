@@ -170,16 +170,15 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 			unlinkSync(getLastResultPath());
 		}
 
-		await invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
-		await invokePowerShellCmd(config.preTestCommand);
-
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
 			title: `Running tests`,
 			cancellable: true
 		}, async (progress, token) => {
 			progress.report({ message: "Working ..." });
-				
+			
+			await invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
+			await invokePowerShellCmd(config.preTestCommand);
 			await invokePowerShellCmd(command).then((result) => {
 
 			}).catch((error) => {
