@@ -368,6 +368,7 @@ function  Get-RipUnzipExeFilePath {
     )
 
     $vsCodeExtRootPath = Get-VSCodeExtensionRootPath
+    $os = $PSVersionTable.OS
     if ($os) {
         if ($os.ToLower().Contains('windows')) {
             $ripUnzipExeFileName = 'ripunzip.exe'
@@ -381,7 +382,7 @@ function  Get-RipUnzipExeFilePath {
     $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', $ripUnzipExeFileName
 
     if (!(Test-Path $ripUnzipPath)) {
-        throw "'ripunzip.exe' path $ripUnzipPath doesn't exist!"
+        throw "'$ripUnzipExeFileName' path $ripUnzipPath doesn't exist!"
     }
 
     return $ripUnzipPath
@@ -405,7 +406,7 @@ function Invoke-RipUnzip {
     
     try {
         $null = Set-Location $ripUnzipFolderPath
-        $cmd = "$ripUnzipExe unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
+        $cmd = "$ripUnzipPath unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
         Invoke-Expression -Command $cmd
         if (!($?)) {
             throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
