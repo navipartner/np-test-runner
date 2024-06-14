@@ -287,7 +287,7 @@ function Get-ServiceHealthUrl {
     }
 }
 
-function Test-ServiceIsRunningAndHealthy {
+function  Test-ServiceIsRunningAndHealthy {
     param (
     )
 
@@ -375,6 +375,16 @@ function  Get-RipUnzipExeFilePath {
     }
     
     $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', $ripUnzipExeFileName
+
+    if (!$IsWindows) {
+        # Not sure if ([System.IO.UnixFileMode]::GroupExecute) or ([System.IO.UnixFileMode]::OtherExecute) should be 
+        # considered too, but I am leaving as it is now (the user probably has its own installation).
+        if (-not (Get-Item $ripUnzipPath).UnixFileMode.HasFlag([System.IO.UnixFileMode]::UserExecute)) {
+            Write-Host "Setting up chmod +x for ripunzip file."
+            Invoke-Expression "chmod +x $ripUnzipPath"
+        }
+        
+    }
 
     if (!(Test-Path $ripUnzipPath)) {
         throw "'$ripUnzipExeFileName' path $ripUnzipPath doesn't exist!"
