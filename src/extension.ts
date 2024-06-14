@@ -373,7 +373,7 @@ async function checkAndLoadPowerShellModules() : Promise<void> {
 
 function extractPowerShellError(error: InvocationError) : string {
 	let errorMsg = error.message;
-	errorMsg = errorMsg.replaceAll('[31;1m', '').replaceAll('[0m', '')
+	errorMsg = errorMsg.replaceAll('[31;1m', '').replaceAll('[0m', '').replaceAll('[36;1m', '');
 	return errorMsg;
 }
 
