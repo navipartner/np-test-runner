@@ -32,6 +32,14 @@ export function getALTestRunnerConfig() {
 	return alTestRunnerConfig as types.ALTestRunnerConfig;
 }
 
+export function getALTestRunnerConfigKeyValue(keyName: string) : string {
+	sendDebugEvent('getALTestRunnerConfigKeyValue', { keyName: keyName });
+	let config = getALTestRunnerConfig();
+	const keyValue = config[keyName];
+	sendDebugEvent('getALTestRunnerConfigKeyValue.result', { keyValue: keyValue });
+	return keyValue;
+}
+
 export function setALTestRunnerConfig(keyName: string, keyValue: string | undefined) {
 	let debugKeyValue = '';
 	if (keyValue) {

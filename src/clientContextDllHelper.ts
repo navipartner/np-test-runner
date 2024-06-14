@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
 import * as types from './types';
-import { invokePowerShellCmd } from './extension';
+import * as path from 'path';
 import * as fetch from 'node-fetch'; 
+import { invokePowerShellCmd, getSmbAlExtensionPath } from './extension';
 import { DOMParser } from 'xmldom';
 import { InvocationResult } from 'node-powershell';
+import * as fs from 'fs';
+import { version } from 'os';
+
+const cslibFolderName = 'CSLib';
 
 async function fetchVersions(sourceUrl: string, filter: string): Promise<string[]> {
     let requestUrl = `${sourceUrl}?comp=list&restype=container`;
@@ -21,6 +26,31 @@ async function fetchVersions(sourceUrl: string, filter: string): Promise<string[
         versions.push(name);
     }
     return versions;
+}
+
+async function findArtifactVersionInOneOfTheSources(version: string) : Promise<types.BcArtifactSource> {
+	let sources : Array<types.BcArtifactSource> = new Array<types.BcArtifactSource>();
+	sources.push(types.BcArtifactSource.OnPrem);
+	sources.push(types.BcArtifactSource.Sandbox);
+	sources.push(types.BcArtifactSource.Insider);
+
+	let validSources : Array<types.BcArtifactSource> = new Array<types.BcArtifactSource>();
+	await Promise.all(sources.map(async (source) => {
+		const sourceUrl = getBcArtifactsUrl(source, types.BcArtifactSourceEndpoint.CDN)
+		await fetchVersions(sourceUrl, version).then((result) => {
+			if ((result) && (result.length > 0)) {
+				validSources.push(source);
+			}
+		});
+	}));
+
+	return new Promise((resolve, reject) => {
+		if (validSources.length > 0) {
+			resolve(validSources[0]);
+		} else {
+			reject(`There is no valid BC artifact for version ${version}.`);
+		}
+	});
 }
 
 export async function showSimpleQuickPick(items: string[], placeholderText?: string): Promise<string | undefined> {
@@ -144,16 +174,60 @@ export function getBcArtifactsUrl(artifactsSource: types.BcArtifactSource, artif
     return null;
 }
 
-export async function downloadClientSessionLibraries() : Promise<InvocationResult> {
-	const artifactSource = await showSimpleQuickPick([types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider]);
-	if (!artifactSource) {
-		return;
+/// This function doesn't do a proper check as we don't know how many libraries there might be.
+/// Some BC versions have currently 3 (older versions) and some 4 (newer versions). In the future
+/// the number of those might change or the names of the libraries could be different.
+/// The function is considered as a fast automated check. The user still have a chance to 
+/// (re)download the libraries manually if needed.
+export async function checkAndDownloadMissingDlls(version: string) : Promise<any> {
+	const extPath = getSmbAlExtensionPath();
+	const libFolderPath = path.join(extPath, cslibFolderName, version);
+
+	let someContentExist = false;
+	if (fs.existsSync(libFolderPath)) {
+		await fs.readdir(libFolderPath, function(err, files) {
+			if (err) {
+			   console.log(`Test existing content in folder ${libFolderPath} failed.`);
+			   throw err;
+			} else {
+			   if (!files.length) {
+				   	// directory appears to be empty
+					someContentExist = false;
+			   } else {
+					someContentExist = true;
+			   }
+			}
+		});
 	}
 
-	const artifactSourceBlobUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.BLOB);
+	if (someContentExist) {
+		return new Promise<any>((resolve) => {
+			resolve(true);
+		})
+	}
+
+	return await downloadClientSessionLibraries(version);
+}
+
+export async function downloadClientSessionLibraries(selectedVersion? : string) : Promise<InvocationResult> {
+	const automaticallySelectedVersion = (!(selectedVersion == null || (selectedVersion.trim().length === 0)));
+
+	let artifactSource : types.BcArtifactSource;
+	if (!automaticallySelectedVersion) {
+		artifactSource = types.BcArtifactSource[await showSimpleQuickPick([types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider])];
+		if (!artifactSource) {
+			return;
+		}
+	} else {
+		artifactSource = await findArtifactVersionInOneOfTheSources(selectedVersion);
+	}
+
 	const artifactSourceCdnUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.CDN);
 	
-	const selectedVersion = await showArtifactVersionQuickPick(null);
+	if (!automaticallySelectedVersion) {
+		selectedVersion = await showArtifactVersionQuickPick(null);
+	}
+
 	if (selectedVersion) {
 		const versionOnly = selectedVersion.split('/')[0];	
 		let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;

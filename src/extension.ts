@@ -5,7 +5,7 @@ import * as types from './types';
 import { CodelensProvider } from './codelensProvider';
 import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from './coverage';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument } from './alFileHelper';
-import { getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath } from './config';
+import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath, getALTestRunnerConfigKeyValue } from './config';
 import { getOutputWriter, OutputWriter } from './output';
 import { createTestController, deleteTestItemForFilename, discoverTests, discoverTestsInDocument, discoverTestsInFileName } from './testController';
 import { onChangeAppFile, publishApp } from './publish';
@@ -19,6 +19,7 @@ import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
 import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError } from 'node-powershell';
+import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
 import * as path from 'path';
 
 let terminal: vscode.Terminal;
@@ -130,6 +131,8 @@ export function activate(context: vscode.ExtensionContext) {
 	alTestController = createTestController();
 	context.subscriptions.push(alTestController);
 	discoverTests();
+
+	checkMissingButConfiguredClientSessionLibsAndDownload();
 }
 
 export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {
@@ -671,6 +674,18 @@ export async function invokeCommandFromAlDevExtension(command: string, params?: 
 	}
 
 	return vscode.commands.executeCommand(command, params);
+}
+
+export async function checkMissingButConfiguredClientSessionLibsAndDownload() : Promise<any> {
+	const selectedBcVersion = getALTestRunnerConfigKeyValue('SelectedBcVersion');
+	if (selectedBcVersion == null || (selectedBcVersion.trim().length === 0)) {
+		return new Promise<any>((resolve) => {
+			// No version configured yet.
+			resolve(false);
+		});
+	}
+
+	return await checkAndDownloadMissingDlls(selectedBcVersion);
 }
 
 //// NEW POWERSHELL INTEGRATION ///
