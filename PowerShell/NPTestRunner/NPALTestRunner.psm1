@@ -368,15 +368,10 @@ function  Get-RipUnzipExeFilePath {
     )
 
     $vsCodeExtRootPath = Get-VSCodeExtensionRootPath
-    $os = $PSVersionTable.OS
-    if ($os) {
-        if ($os.ToLower().Contains('windows')) {
-            $ripUnzipExeFileName = 'ripunzip.exe'
-        } else {
-            $ripUnzipExeFileName = 'ripunzip'
-        }
-    } else {
+    if ($IsWindows) {
         $ripUnzipExeFileName = 'ripunzip.exe'
+    } else {
+        $ripUnzipExeFileName = 'ripunzip'
     }
     
     $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', $ripUnzipExeFileName
@@ -573,15 +568,12 @@ function Get-ALDevCacheFileContent {
         $credentialReader = [ALCredentialCacheLibrary.ALCredentailCacheReader]
     }
 
-    $os = $PSVersionTable.OS
-    if ($os) {
-        if ($os.ToLower().Contains('windows')) {
-            $SmbAlExtBinPath = Join-Path $SmbAlExtPath '\bin\win32\'
-        } else {
-            $SmbAlExtBinPath = Join-Path $SmbAlExtPath '/bin/linux'
-        }
-    } else {
+    if ($IsWindows) {
         $SmbAlExtBinPath = Join-Path $SmbAlExtPath '\bin\win32\'
+    } elseif ($IsMacOS) {
+        $SmbAlExtBinPath = Join-Path $SmbAlExtPath '/bin/darwin'
+    } else {
+        $SmbAlExtBinPath = Join-Path $SmbAlExtPath '/bin/linux'
     }
     $smbAlCacheFilePath = Join-Path $SmbAlExtBinPath $FileName
     
