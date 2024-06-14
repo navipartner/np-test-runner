@@ -739,8 +739,4 @@ function Test-BcAuthContext {
     }
 }
 
-
-
-$Global:ExtensionSystemFolderPath = Get-ALTestRunnerConfigPath -ReturnFolderPath
-
 Export-ModuleMember -Function *

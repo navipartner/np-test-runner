@@ -1,28 +1,11 @@
-function Get-ALTestRunnerConfigPath {
-    param (
-        [switch]$ReturnFolderPath
-    )
-
+function Get-ALTestRunnerConfigPath {    
     $ConfigPath = Find-ALTestRunnerConfigInFolder (Get-Location)
     if ($null -eq $ConfigPath) {
         $ConfigPath = Find-ALTestRunnerConfigInFolder (Split-Path (Get-Location) -Parent)
     }
 
-    
     if ($null -eq $ConfigPath) {
-        $ConfigPath = Join-Path (Get-Location) '.altestrunner'
-
-        if (-not ($ReturnFolderPath)) {
-            $ConfigPath = Join-Path $ConfigPath '.config'
-        }
-    }
-
-    if ($ReturnFolderPath) {
-        $ConfigPath = $ConfigPath.TrimEnd('.config');
-    }
-
-    if ($ReturnFolderPath) {
-        $ConfigPath = $ConfigPath.TrimEnd('config.json');
+        $ConfigPath = Join-Path (Join-Path (Get-Location) '.altestrunner') '.config'
     }
 
     return $ConfigPath
