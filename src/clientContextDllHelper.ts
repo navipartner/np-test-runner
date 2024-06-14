@@ -86,8 +86,10 @@ export async function showArtifactVersionQuickPick(sourceUrl: string, text: stri
 }
 
 async function updateVersionPicker(versionPicker: vscode.QuickPick<vscode.QuickPickItem>, filter: string): Promise<vscode.QuickPick<vscode.QuickPickItem>> {
+	var platformFilter = 'platform';
 	let versions = await fetchVersions(`https://bcartifacts.blob.core.windows.net/onprem/`, filter);
 	versionPicker.items = versions.map(version => ({ label: version }));
+	versionPicker.items = versionPicker.items.filter(function (str) { return str.label.indexOf(platformFilter) !== -1; })
 
 	return new Promise((resolve) => {
 		resolve(versionPicker);
