@@ -441,6 +441,47 @@ function Get-ClientSessionLibrariesFromBcArtifacts {
     }
 
     Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'?pplications\*\?est?unner\?nternal\*.dll'"
+
+    if (-not ($IsWindows)) {
+        Restore-DownloadedFileNames -FolderPath $destPath
+    }
+}
+
+<#
+.SYNOPSIS
+This should be used only on Unix-based OS versions (this is the principal idea of the cmdlet).
+.DESCRIPTION
+ripunzip sees the files included in BC artifacts in this format:
+    Applications\testframework\TestRunner\Internal\ALTestRunnerInternal.psm1
+    Applications\testframework\TestRunner\Internal\AadTokenProvider.ps1
+    Applications\testframework\TestRunner\Internal\BCPTTestRunnerInternal.psm1
+    Applications\testframework\TestRunner\Internal\ClientContext.ps1
+    Applications\testframework\TestRunner\Internal\Microsoft.Dynamics.Framework.UI.Client.dll
+    Applications\testframework\TestRunner\Internal\Microsoft.IdentityModel.Clients.ActiveDirectory.dll
+    Applications\testframework\TestRunner\Internal\Newtonsoft.Json.dll
+    Applications\testframework\TestRunner\Internal\System.ServiceModel.Primitives.dll
+And then when downloading, it stores them in the same way which creates on linux files with wrong names including
+the path as part of the name.
+There is no way how to change the naming so we have cleanup the file names.
+#>
+function Restore-DownloadedFileNames {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$FolderPath
+    )
+
+    $files = Get-ChildItem $FolderPath;
+    foreach ($file in $files) {
+        $i = $file.Name.LastIndexOf('\')
+        if ($i -ge 0) {
+            $newName = $file.Name.Remove(0, $i)
+            $newPath = (Join-Path $FolderPath $newName)
+            [System.IO.File]::Copy($file.FullName, $newPath, $true)
+            $null = Test-Path $newPath
+            [System.IO.File]::Delete($file.FullName)
+        }
+    }
 }
 
 function Import-ClientContextModule {
