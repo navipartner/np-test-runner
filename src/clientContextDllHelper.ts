@@ -158,10 +158,10 @@ export async function downloadClientSessionLibraries() : Promise<InvocationResul
 		
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
-			title: `Downloading client session libraries for BC ${versionOnly} ...`,
+			title: `Downloading client session libraries for BC ${versionOnly}`,
 			cancellable: true
 		}, async (progress, token) => {
-			progress.report({ message: "Working ..." });
+			progress.report({ message: "Working" });
 				
 			await invokePowerShellCmd(command).then((restult) => {
 				return restult;
