@@ -18,8 +18,7 @@ import { CodeCoverageCodeLensProvider } from './codeCoverageCodeLensProvider';
 import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
-import { showSimpleQuickPick, showArtifactVersionQuickPick, getBcArtifactsUrl } from './clientContextDllHelper';
-import { PowerShell, PowerShellOptions, PSExecutableType, InvocationResult, InvocationError } from 'node-powershell';
+import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError } from 'node-powershell';
 import * as path from 'path';
 
 let terminal: vscode.Terminal;

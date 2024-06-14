@@ -47,7 +47,7 @@ export async function showSimpleQuickPick(items: string[], placeholderText?: str
 	});
 }
 
-export async function showArtifactVersionQuickPick(sourceUrl: string, text: string, versions: string[]): Promise<string | undefined> {
+async function showArtifactVersionQuickPick(versions: string[]): Promise<string | undefined> {
 	let quickPick = vscode.window.createQuickPick();
 	if (versions) {
 		quickPick.items = versions.map(version => ({ label: version }));
@@ -153,7 +153,7 @@ export async function downloadClientSessionLibraries() : Promise<InvocationResul
 	const artifactSourceBlobUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.BLOB);
 	const artifactSourceCdnUrl = getBcArtifactsUrl(types.BcArtifactSource[artifactSource], types.BcArtifactSourceEndpoint.CDN);
 	
-	const selectedVersion = await showArtifactVersionQuickPick(artifactSourceBlobUrl, null, null);
+	const selectedVersion = await showArtifactVersionQuickPick(null);
 	if (selectedVersion) {
 		const versionOnly = selectedVersion.split('/')[0];	
 		let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
