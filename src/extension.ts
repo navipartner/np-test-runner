@@ -23,6 +23,7 @@ import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
 import * as path from 'path';
 
 let terminal: vscode.Terminal;
+let debugChannel: vscode.OutputChannel;
 var powershellSession = null;
 var powershellSessionReady = false;
 export let activeEditor = vscode.window.activeTextEditor;
@@ -313,6 +314,7 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		return result;
 	}).catch((error) => {
 		console.log(error);
+		writeToOutputChannel(`${command}  =>  ${error}`);
 		const errorMsg = extractPowerShellError(error);
 		throw errorMsg;
 	});
@@ -544,6 +546,20 @@ export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
 export function getExtension() {
 	return vscode.extensions.getExtension('navipartner.np-al-test-runner');
 }
+
+export function writeToOutputChannel(value: string) {
+	sendDebugEvent('writeToOutputChannel-start');
+	if (!debugChannel) {
+		debugChannel = vscode.window.createOutputChannel(getOutputChannel());
+	}
+
+	debugChannel.appendLine(value);
+}
+
+export function getOutputChannel() {
+	return 'al-test-runner-output';
+}
+
 
 export function getRangeOfFailingLineFromCallstack(callstack: string, method: string, document: vscode.TextDocument): vscode.Range  {
 	const methodStartLineForCallstack = getLineNumberOfMethodDeclaration(method, document);
