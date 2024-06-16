@@ -5,7 +5,7 @@ function Get-ALTestRunnerConfigPath {
     }
 
     if ($null -eq $ConfigPath) {
-        $ConfigPath = Join-Path (Join-Path (Get-Location) '.altestrunner') '.config'
+        $ConfigPath = Join-Path (Join-Path (Get-Location) '.altestrunner') 'config.json'
     }
 
     return $ConfigPath
