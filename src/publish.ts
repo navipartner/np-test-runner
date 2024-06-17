@@ -109,7 +109,7 @@ export async function onChangeAppFile(uri: vscode.Uri) {
 }
 
 function getTerminalName(): string {
-    return 'al-test-runner';
+    return 'np-al-test-runner';
 }
 
 function getPublishCompletionPath(): string {

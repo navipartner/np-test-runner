@@ -62,7 +62,7 @@ export async function getCodeCoveragePath(codeCoverageType?: CodeCoverageDisplay
                 resolve(join(dirname(path), 'codeCoverageAll.json'));
             }
         }
-        let config = vscode.workspace.getConfiguration('al-test-runner');
+        let config = vscode.workspace.getConfiguration('np-al-test-runner');
         if (config.codeCoveragePath) {
             if (getTestFolderPath) {
                 const testFolderName = getTestFolderPath();

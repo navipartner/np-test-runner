@@ -28,11 +28,11 @@ var powershellSession = null;
 var powershellSessionReady = false;
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
-const config = vscode.workspace.getConfiguration('al-test-runner');
+const config = vscode.workspace.getConfiguration('np-al-test-runner');
 const passingTestColor = 'rgba(' + config.passingTestsColor.red + ',' + config.passingTestsColor.green + ',' + config.passingTestsColor.blue + ',' + config.passingTestsColor.alpha + ')';
 const failingTestColor = 'rgba(' + config.failingTestsColor.red + ',' + config.failingTestsColor.green + ',' + config.failingTestsColor.blue + ',' + config.failingTestsColor.alpha + ')';
 const untestedTestColor = 'rgba(' + config.untestedTestsColor.red + ',' + config.untestedTestsColor.green + ',' + config.untestedTestsColor.blue + ',' + config.untestedTestsColor.alpha + ')';
-export const outputWriter: OutputWriter = getOutputWriter(vscode.workspace.getConfiguration('al-test-runner').testOutputLocation);
+export const outputWriter: OutputWriter = getOutputWriter(vscode.workspace.getConfiguration('np-al-test-runner').testOutputLocation);
 export const channelWriter: OutputWriter = getOutputWriter(types.OutputType.Channel);
 
 const testFolderPath = getTestFolderPath();
@@ -516,7 +516,7 @@ if (activeEditor) {
 }
 
 export function getTerminalName() {
-	return 'al-test-runner';
+	return 'np-al-test-runner';
 }
 
 export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
@@ -557,7 +557,7 @@ export function writeToOutputChannel(value: string) {
 }
 
 export function getOutputChannel() {
-	return 'al-test-runner-output';
+	return 'np-al-test-runner-output';
 }
 
 

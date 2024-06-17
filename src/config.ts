@@ -143,10 +143,10 @@ export function getCurrentWorkspaceConfig(forTestFolder: boolean = true) {
 	}
 
 	if (testFolderPath) {
-		return vscode.workspace.getConfiguration('al-test-runner', vscode.Uri.file(testFolderPath));
+		return vscode.workspace.getConfiguration('np-al-test-runner', vscode.Uri.file(testFolderPath));
 	}
 	else {
-		return vscode.workspace.getConfiguration('al-test-runner');
+		return vscode.workspace.getConfiguration('np-al-test-runner');
 	}
 }
 

@@ -16,7 +16,7 @@
 	"files": [
 		"PowerShell/"
 	],
-	"version": "0.25.10",
+	"version": "0.25.11",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -153,13 +153,13 @@
 			{
 				"title": "NaviPartner AL Test Runner",
 				"properties": {
-					"al-test-runner.decorateTestMethods": {
+					"np-al-test-runner.decorateTestMethods": {
 						"type": "boolean",
 						"scope": "resource",
 						"default": true,
 						"description": "Decorate test methods with test results. When this setting is enabled the AL Test Runner extension will decorate the names of test methods in test codeunits according to the result of running that test."
 					},
-					"al-test-runner.passingTestsColor": {
+					"np-al-test-runner.passingTestsColor": {
 						"type": "object",
 						"description": "Background color for passing tests (rgba format)",
 						"scope": "resource",
@@ -188,7 +188,7 @@
 							}
 						}
 					},
-					"al-test-runner.failingTestsColor": {
+					"np-al-test-runner.failingTestsColor": {
 						"type": "object",
 						"description": "Background color for failing tests (rgba format)",
 						"scope": "resource",
@@ -217,7 +217,7 @@
 							}
 						}
 					},
-					"al-test-runner.untestedTestsColor": {
+					"np-al-test-runner.untestedTestsColor": {
 						"type": "object",
 						"description": "Background color for untested tests (rgba format)",
 						"scope": "resource",
@@ -246,7 +246,7 @@
 							}
 						}
 					},
-					"al-test-runner.publishBeforeTest": {
+					"np-al-test-runner.publishBeforeTest": {
 						"enum": [
 							"None",
 							"Publish",
@@ -256,70 +256,70 @@
 						"scope": "resource",
 						"default": "None"
 					},
-					"al-test-runner.highlightFailingLine": {
+					"np-al-test-runner.highlightFailingLine": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Highlight the line in the test method that has failed",
 						"default": true
 					},
-					"al-test-runner.failingLineDecoration": {
+					"np-al-test-runner.failingLineDecoration": {
 						"type": "string",
 						"scope": "resource",
 						"description": "TextDecoration CSS to decorate failing lines with",
 						"default": "underline wavy red"
 					},
-					"al-test-runner.preTestCommand": {
+					"np-al-test-runner.preTestCommand": {
 						"type": "string",
 						"scope": "resource",
 						"description": "A PowerShell command to execute prior to running tests"
 					},
-					"al-test-runner.postTestCommand": {
+					"np-al-test-runner.postTestCommand": {
 						"type": "string",
 						"scope": "resource",
 						"description": "A PowerShell command to execute after tests have been executed"
 					},
-					"al-test-runner.enableCodeLens": {
+					"np-al-test-runner.enableCodeLens": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Enables CodeLens actions to run individual tests or all tests in a codeunit",
 						"default": true
 					},
-					"al-test-runner.testRunnerInitialisationTime": {
+					"np-al-test-runner.testRunnerInitialisationTime": {
 						"type": "number",
 						"scope": "resource",
 						"description": "The delay (in milliseconds) to allow the test runner to initialise before attaching the debugger",
 						"default": 3000
 					},
-					"al-test-runner.codeCoveragePath": {
+					"np-al-test-runner.codeCoveragePath": {
 						"type": "string",
 						"scope": "resource",
 						"description": "The path to the JSON file which has details of the code coverage for this project",
 						"default": "./.npaltestrunner/codecoverage.json"
 					},
-					"al-test-runner.codeCoverageExcludeFiles": {
+					"np-al-test-runner.codeCoverageExcludeFiles": {
 						"type": "string",
 						"scope": "resource",
 						"description": "A regex pattern which defines file paths to exclude from the code coverage summary e.g. use it to exclude test objects"
 					},
-					"al-test-runner.enableCodeCoverage": {
+					"np-al-test-runner.enableCodeCoverage": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Outputs code coverage statistics with test results and decorates covered lines with the Toggle Code Coverage command. See also the Code Coverage Path extension setting and key in the AL Test Runner config.json file.",
 						"default": false,
 						"anyOf": [false]
 					},
-					"al-test-runner.enablePerformanceProfiler": {
+					"np-al-test-runner.enablePerformanceProfiler": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Downloads performance profiler data for each test run.",
 						"default": false
 					},
-					"al-test-runner.testFolderName": {
+					"np-al-test-runner.testFolderName": {
 						"type": "string",
 						"scope": "resource",
 						"description": "The name of the workspace folder that contains the test app. Please reload VS Code after changing this setting."
 					},
-					"al-test-runner.testOutputLocation": {
+					"np-al-test-runner.testOutputLocation": {
 						"enum": [
 							"Output",
 							"Editor"
@@ -328,30 +328,30 @@
 						"description": "Determines where test results will be displayed",
 						"default": "Output"
 					},
-					"al-test-runner.enablePublishingFromPowerShell": {
+					"np-al-test-runner.enablePublishingFromPowerShell": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Enable (experimental) publishing apps from PowerShell"
 					},
-					"al-test-runner.publishTimeout": {
+					"np-al-test-runner.publishTimeout": {
 						"type": "number",
 						"scope": "resource",
 						"description": "Timeout (milliseconds) for publishing apps from PowerShell",
 						"default": 20000
 					},
-					"al-test-runner.automaticPublishing": {
+					"np-al-test-runner.automaticPublishing": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Automatically publish apps to the container when compiling",
 						"default": false
 					},
-					"al-test-runner.sendDebugTelemetry": {
+					"np-al-test-runner.sendDebugTelemetry": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Include debug events in the telemetry to help with troubleshooting",
 						"default": false
 					},
-					"al-test-runner.testWorkspaceFolderIdentifiers": {
+					"np-al-test-runner.testWorkspaceFolderIdentifiers": {
 						"type": "array",
 						"scope": "resource",
 						"description": "Text to look for in workspace folder names to identify the folder which contains the test app",

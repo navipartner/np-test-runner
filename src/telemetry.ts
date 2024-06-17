@@ -118,5 +118,5 @@ export function sendEvent(eventName: string, properties?: TelemetryEventProperti
 }
 
 export function setSendDebugEvents(newSendTelemetryEvents: boolean) {
-    vscode.workspace.getConfiguration().update('al-test-runner.sendDebugTelemetry', newSendTelemetryEvents);
+    vscode.workspace.getConfiguration().update('np-al-test-runner.sendDebugTelemetry', newSendTelemetryEvents);
 }

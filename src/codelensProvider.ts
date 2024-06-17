@@ -11,7 +11,7 @@ export class CodelensProvider implements vscode.CodeLensProvider {
             return this.codeLenses;
         }
 
-        const config = vscode.workspace.getConfiguration('al-test-runner');
+        const config = vscode.workspace.getConfiguration('np-al-test-runner');
         if (config.enableCodeLens) {
             const testMethodRanges = getTestMethodRangesFromDocument(document);
             testMethodRanges.forEach(testMethodRange => {
