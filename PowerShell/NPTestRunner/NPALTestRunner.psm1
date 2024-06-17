@@ -365,11 +365,16 @@ function  Get-RipUnzipExeFilePath {
     $vsCodeExtRootPath = Get-VSCodeExtensionRootPath
     if ($IsWindows) {
         $ripUnzipExeFileName = 'ripunzip.exe'
+        $ripUnzipSubfolder = 'win32'
+    } elseif ($IsMacOS) {
+        $ripUnzipExeFileName = 'ripunzip'
+        $ripUnzipSubfolder = 'darwin'
     } else {
         $ripUnzipExeFileName = 'ripunzip'
+        $ripUnzipSubfolder = 'ubuntu'
     }
     
-    $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', $ripUnzipExeFileName
+    $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', $ripUnzipSubfolder, $ripUnzipExeFileName
 
     if (!$IsWindows) {
         # Not sure if ([System.IO.UnixFileMode]::GroupExecute) or ([System.IO.UnixFileMode]::OtherExecute) should be 
