@@ -545,11 +545,11 @@ function Get-MsbAlExtBinariesPath {
     )
 
     if ($IsWindows) {
-        return = Join-Path $msDynamicsSmbAlExtPath '\bin\win32\'
+        return Join-Path $msDynamicsSmbAlExtPath '\bin\win32\'
     } elseif ($IsMacOS) {
-        return = Join-Path $msDynamicsSmbAlExtPath '/bin/darwin'
+        return Join-Path $msDynamicsSmbAlExtPath '/bin/darwin'
     } else {
-        return = Join-Path $msDynamicsSmbAlExtPath '/bin/linux'
+        return Join-Path $msDynamicsSmbAlExtPath '/bin/linux'
     }
 }
 
