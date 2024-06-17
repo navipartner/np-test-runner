@@ -161,10 +161,8 @@ export function readyToRunTests(): Promise<Boolean> {
         if (launchConfigIsValid() == launchConfigValidity.Invalid) {
             sendDebugEvent('readyToRunTests-launchConfigNotValid');
             //clear the credentials and company name if the launch config is not valid
-            setALTestRunnerConfig('userName', '');
-            setALTestRunnerConfig('securePassword', '');
             setALTestRunnerConfig('companyName', '');
-            setALTestRunnerConfig('testRunnerServiceUrl', '')
+            //setALTestRunnerConfig('testRunnerServiceUrl', '')
             await selectLaunchConfig();
         }
 
