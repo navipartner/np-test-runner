@@ -6,6 +6,7 @@ import { invokePowerShellCmd, getSmbAlExtensionPath } from './extension';
 import { DOMParser } from 'xmldom';
 import { InvocationResult } from 'node-powershell';
 import * as fs from 'fs';
+import { getALTestRunnerConfigKeyValue } from './config';
 import { version } from 'os';
 
 const cslibFolderName = 'CSLib';
@@ -51,6 +52,22 @@ async function findArtifactVersionInOneOfTheSources(version: string) : Promise<t
 			reject(`There is no valid BC artifact for version ${version}.`);
 		}
 	});
+}
+
+export async function selectBcVersionIfNotSelected() : Promise<boolean> {
+	let selectedBcVersion = getALTestRunnerConfigKeyValue('selectedBcVersion');
+	if (!((selectedBcVersion == null) || (selectedBcVersion == ''))) {
+		return new Promise<boolean>((resolve) => {
+			resolve(true);
+		});
+	}
+
+	await downloadClientSessionLibraries();
+	
+	selectedBcVersion = getALTestRunnerConfigKeyValue('selectedBcVersion');
+	return new Promise<boolean>((resolve) => {
+		resolve(selectedBcVersion != '');
+	})
 }
 
 export async function showSimpleQuickPick(items: string[], placeholderText?: string): Promise<string | undefined> {
@@ -214,7 +231,9 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 
 	let artifactSource : types.BcArtifactSource;
 	if (!automaticallySelectedVersion) {
-		artifactSource = types.BcArtifactSource[await showSimpleQuickPick([types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider])];
+		artifactSource = types.BcArtifactSource[await showSimpleQuickPick(
+			[types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider], 
+			'You have to select libraries used to connect to BC session. Exact match is probably not needed but still recommended.')];
 		if (!artifactSource) {
 			return;
 		}
@@ -231,23 +250,26 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 	if (selectedVersion) {
 		const versionOnly = selectedVersion.split('/')[0];	
 		let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
-		
-		vscode.window.withProgress({
+
+		const bcv = await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
 			title: `Downloading client session libraries for BC ${versionOnly}`,
 			cancellable: true
 		}, async (progress, token) => {
 			progress.report({ message: "Working" });
 				
-			await invokePowerShellCmd(command).then((restult) => {
-				return restult;
+			const bcv = await invokePowerShellCmd(command).then((result) => {
+				return result;
 			}).catch((error) => {
 				vscode.window.showErrorMessage(`Client session libraries haven't been downloaded. Additional details: ${error}`);
+				throw error;
 			});
-	
-			return new Promise<void>((resolve) => {
-				resolve();
-			});
+
+			return bcv;
+		});
+
+		return new Promise<any>((resolve) => {
+			resolve(bcv);
 		});
 	}
 }

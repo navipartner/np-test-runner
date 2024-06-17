@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getALObjectFromPath, getALObjectOfDocument, getFilePathOfObject, getTestMethodRangesFromDocument } from './alFileHelper';
-import { getALTestRunnerConfig, getCurrentWorkspaceConfig, getLaunchConfiguration, launchConfigIsValid, selectLaunchConfig, setALTestRunnerConfig } from './config';
+import { getALTestRunnerConfig, getCurrentWorkspaceConfig, getLaunchConfiguration, launchConfigIsValid, selectLaunchConfig, setALTestRunnerConfig, getALTestRunnerConfigKeyValue } from './config';
 import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, invokeTestRunner, outputWriter, getLastResultPath, getSmbAlExtensionPath } from './extension';
 import { ALTestAssembly, ALTestResult, ALMethod, DisabledTest, ALFile, launchConfigValidity, CodeCoverageDisplay } from './types';
 import * as path from 'path';
@@ -8,6 +8,7 @@ import { sendDebugEvent, sendTestDebugStartEvent, sendTestRunFinishedEvent, send
 import { buildTestCoverageFromTestItem } from './testCoverage';
 import { getALFilesInCoverage, getFileCoverage, getStatementCoverage, readCodeCoverage, saveAllTestsCodeCoverage, saveTestRunCoverage } from './coverage';
 import { readyToDebug } from './debug';
+import { selectBcVersionIfNotSelected } from './clientContextDllHelper';
 
 export let numberOfTests: number;
 
@@ -167,8 +168,11 @@ export function readyToRunTests(): Promise<Boolean> {
             await selectLaunchConfig();
         }
 
-        if (launchConfigIsValid() == launchConfigValidity.Valid) {
+        const bcVerSelected = await selectBcVersionIfNotSelected();
+
+        if ((launchConfigIsValid() == launchConfigValidity.Valid) && (bcVerSelected)) {
             sendDebugEvent('readyToRunTests-launchConfigIsValid');
+            sendDebugEvent('readyToRunTests-bcVersionSelected');
             resolve(true);
         }
         else {
