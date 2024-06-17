@@ -34,111 +34,115 @@ function Invoke-NPALTests {
         [string]$ResultsFilePath
     )
 
-    $Params = @{}
+    try {
+        $Params = @{}
 
-    $environmentType = Get-ValueFromLaunchJson -KeyName 'environmentType'
-    $tenant = Get-ValueFromLaunchJson -KeyName 'tenant'
-    $serviceUrl = Get-ServiceUrl
+        $environmentType = Get-ValueFromLaunchJson -KeyName 'environmentType'
+        $tenant = Get-ValueFromLaunchJson -KeyName 'tenant'
+        $serviceUrl = Get-ServiceUrl
 
-    Test-ServiceIsRunningAndHealthy
+        Test-ServiceIsRunningAndHealthy
 
-    # Let's check version and already loaded modules (if any) and eventually load/import ClientContext assemblies and types.
-    $Version = Get-SelectedBcVersion
-    if ($global:ClientContextLoadedModuleVersion -ne $Version) {
+        # Let's check version and already loaded modules (if any) and eventually load/import ClientContext assemblies and types.
+        $Version = Get-SelectedBcVersion
+        if ($global:ClientContextLoadedModuleVersion -ne $Version) {
+            
+            Push-Location
+
+            try {        
+                Set-Location $PSScriptRoot
+                . (Join-Path $PSScriptRoot -ChildPath 'ClientContext' -AdditionalChildPath 'ClientContextLibLoader.ps1') -BcLibVersion $Version
+                . (Join-Path $PSScriptRoot 'ClientSessionLibLoader.ps1')
+                $global:ClientContextLoadedModuleVersion = $Version
+            }
+            catch {
+                Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
+            }
+            finally {
+                Pop-Location
+            }
+        }
+
+        switch ($environmentType) {
+            OnPrem {
+                $serviceUrlCredCacheKey = Get-ServiceUrlCredentialCacheKey
+                $serviceUrlCredCacheKey = $serviceUrlCredCacheKey.ToLower();
+
+                $creds = Get-NavUserPasswordCredentials -SmbAlExtPath $SmbAlExtPath -WebClientUrl $serviceUrlCredCacheKey
+                if (!$creds) {
+                    throw "Can't find credential for the key $serviceUrlCredCacheKey!"
+                }
+
+                [securestring]$secStringPassword = ConvertTo-SecureString $creds.Password -AsPlainText -Force
+                [pscredential]$creds = New-Object System.Management.Automation.PSCredential ($creds.Username, $secStringPassword)
+                if (!$creds) {
+                    throw "Can't find credentials in the AL development credential cache for $serviceUrlCredCacheKey!"
+                }
+
+                $Params.Add('Credential', $creds)
+                $Params.Add('AutorizationType', 'NavUserPassword')
+            }
+            Sandbox {
+                # Sandbox with AAD auth.
+                $environmentName = Get-ValueFromLaunchJson -KeyName 'environmentName'
+                if (!$bcAuthContext) {
+                    $bcAuthContext = New-BcAuthContext -includeDeviceLogin
+                }
+                $bcAuthContext = Renew-BcAuthContext $bcAuthContext
+                $Global:BCAuthContext = $bcAuthContext
+                
+                #$accessToken = $bcAuthContext.accessToken
+                #$credential = New-Object pscredential -ArgumentList $bcAuthContext.upn, (ConvertTo-SecureString -String $accessToken -AsPlainText -Force)
+                
+                $response = Invoke-RestMethod -Method Get -Uri "https://businesscentral.dynamics.com/$($bcAuthContext.tenantID)/$environmentName/deployment/url"
+                if($response.status -ne 'Ready') {
+                    throw "environment not ready, status is $($response.status)"
+                }
+                $useUrl = $response.data.Split('?')[0]
+                $tenant = ($response.data.Split('?')[1]).Split('=')[1]
+                $publicWebBaseUrl = $useUrl.TrimEnd('/')
+                $serviceUrl = "$publicWebBaseUrl/cs?tenant=$tenant"
+                if ($companyName) {
+                    $serviceUrl += "&company=$([Uri]::EscapeDataString($companyName))"
+                }
+                
+                $Params.Add('AutorizationType', 'AAD')
+            }
+            Default {
+                throw "Environment type '$environmentType' is not supported!"
+            }
+        }
         
-        Push-Location
-
-        try {        
-            Set-Location $PSScriptRoot
-            . (Join-Path $PSScriptRoot -ChildPath 'ClientContext' -AdditionalChildPath 'ClientContextLibLoader.ps1') -BcLibVersion $Version
-            . (Join-Path $PSScriptRoot 'ClientSessionLibLoader.ps1')
-            $global:ClientContextLoadedModuleVersion = $Version
-        }
-        catch {
-            Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
-        }
-        finally {
-            Pop-Location
-        }
-    }
-
-    switch ($environmentType) {
-        OnPrem {
-            $serviceUrlCredCacheKey = Get-ServiceUrlCredentialCacheKey
-            $serviceUrlCredCacheKey = $serviceUrlCredCacheKey.ToLower();
-
-            $creds = Get-NavUserPasswordCredentials -SmbAlExtPath $SmbAlExtPath -WebClientUrl $serviceUrlCredCacheKey
-            if (!$creds) {
-                throw "Can't find credential for the key $serviceUrlCredCacheKey!"
+        if ($FileName -ne '') {
+            if (Get-FileIsTestCodeunit -FileName $FileName) {
+                $Params.Add('TestCodeunitsRange', (Get-ObjectIdFromFile $FileName))
             }
-
-            [securestring]$secStringPassword = ConvertTo-SecureString $creds.Password -AsPlainText -Force
-            [pscredential]$creds = New-Object System.Management.Automation.PSCredential ($creds.Username, $secStringPassword)
-            if (!$creds) {
-                throw "Can't find credentials in the AL development credential cache for $serviceUrlCredCacheKey!"
+            else {
+                throw "$FileName is not an AL test codeunit"
             }
-
-            $Params.Add('Credential', $creds)
-            $Params.Add('AutorizationType', 'NavUserPassword')
         }
-        Sandbox {
-            # Sandbox with AAD auth.
-            $environmentName = Get-ValueFromLaunchJson -KeyName 'environmentName'
-            if (!$bcAuthContext) {
-                $bcAuthContext = New-BcAuthContext -includeDeviceLogin
+
+        if ($SelectionStart -ne 0) {
+            $TestName = Get-TestNameFromSelectionStart -Path $FileName -SelectionStart $SelectionStart
+            if ($TestName -eq '') {
+                throw "Please place the cursor within the test method that you want to run and try again."
             }
-            $bcAuthContext = Renew-BcAuthContext $bcAuthContext
-            $Global:BCAuthContext = $bcAuthContext
-            
-            #$accessToken = $bcAuthContext.accessToken
-            #$credential = New-Object pscredential -ArgumentList $bcAuthContext.upn, (ConvertTo-SecureString -String $accessToken -AsPlainText -Force)
-            
-            $response = Invoke-RestMethod -Method Get -Uri "https://businesscentral.dynamics.com/$($bcAuthContext.tenantID)/$environmentName/deployment/url"
-            if($response.status -ne 'Ready') {
-                throw "environment not ready, status is $($response.status)"
+            else {
+                $Params.Add('TestProcedureRange', $TestName)
             }
-            $useUrl = $response.data.Split('?')[0]
-            $tenant = ($response.data.Split('?')[1]).Split('=')[1]
-            $publicWebBaseUrl = $useUrl.TrimEnd('/')
-            $serviceUrl = "$publicWebBaseUrl/cs?tenant=$tenant"
-            if ($companyName) {
-                $serviceUrl += "&company=$([Uri]::EscapeDataString($companyName))"
-            }
-            
-            $Params.Add('AutorizationType', 'AAD')
         }
-        Default {
-            throw "Environment type '$environmentType' is not supported!"
-        }
-    }
-    
-    if ($FileName -ne '') {
-        if (Get-FileIsTestCodeunit -FileName $FileName) {
-            $Params.Add('TestCodeunitsRange', (Get-ObjectIdFromFile $FileName))
-        }
-        else {
-            throw "$FileName is not an AL test codeunit"
-        }
-    }
 
-    if ($SelectionStart -ne 0) {
-        $TestName = Get-TestNameFromSelectionStart -Path $FileName -SelectionStart $SelectionStart
-        if ($TestName -eq '') {
-            throw "Please place the cursor within the test method that you want to run and try again."
+        if (-not [string]::IsNullOrEmpty($ResultsFilePath)) {
+            $Params.Add('ResultsFilePath', $ResultsFilePath)
+            $Params.Add('SaveResultFile', $true);
+        } else {
+            $Params.Add('SaveResultFile', $false);
         }
-        else {
-            $Params.Add('TestProcedureRange', $TestName)
-        }
-    }
 
-    if (-not [string]::IsNullOrEmpty($ResultsFilePath)) {
-        $Params.Add('ResultsFilePath', $ResultsFilePath)
-        $Params.Add('SaveResultFile', $true);
-    } else {
-        $Params.Add('SaveResultFile', $false);
+        Run-AlTests -ServiceUrl $serviceUrl @Params
+    } catch {
+        throw "$($_)`n$($_.ScriptStackTrace)`n$($_.Exception)"
     }
-
-    Run-AlTests -ServiceUrl $serviceUrl @Params
 }
 
 function Get-OnPremServiceUrlCredentialKey {

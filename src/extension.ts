@@ -313,10 +313,32 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		console.log(result);
 		return result;
 	}).catch((error) => {
-		console.log(error);
-		writeToOutputChannel(`${command}  =>  ${error}`);
-		const errorMsg = extractPowerShellError(error);
-		throw errorMsg;
+		let errorMsg = null;
+		let errorStack = null;
+
+		try {
+			writeToOutputChannel(Buffer.from(powershellSession.history[0].stdout).toString());
+			errorMsg = extractPowerShellError(error.message);
+			errorStack = extractPowerShellError(error.stack);
+			writeToOutputChannel(`${command}  =>  ${errorMsg}`);
+			console.log(error);
+		} catch {
+			console.log(error);
+		}
+
+		try {
+			if (debugChannel) {
+				debugChannel.show(false);
+			}
+		} catch(e) {
+			console.log(`Can't open PowerShell invocation error channel: ${e}`);
+		}
+
+		if (errorMsg != null) {
+			throw errorMsg;
+		} else {
+			throw error;
+		}
 	});
 }
 
@@ -373,8 +395,8 @@ async function checkAndLoadPowerShellModules() : Promise<void> {
 	}
 }
 
-function extractPowerShellError(error: InvocationError) : string {
-	let errorMsg = error.message;
+function extractPowerShellError(extractionString: string) : string {
+	let errorMsg = extractionString;
 	errorMsg = errorMsg.replaceAll('[31;1m', '').replaceAll('[0m', '').replaceAll('[36;1m', '');
 	return errorMsg;
 }
