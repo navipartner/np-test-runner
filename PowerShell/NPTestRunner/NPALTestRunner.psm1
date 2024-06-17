@@ -535,8 +535,13 @@ function Get-MsbAlExtBinariesPath {
         [string]$msDynamicsSmbAlExtPath
     )
 
-    # TODO: What about macOS (OS X) or Linux?
-    return (Join-Path $msDynamicsSmbAlExtPath '\bin\win32\')
+    if ($IsWindows) {
+        return = Join-Path $msDynamicsSmbAlExtPath '\bin\win32\'
+    } elseif ($IsMacOS) {
+        return = Join-Path $msDynamicsSmbAlExtPath '/bin/darwin'
+    } else {
+        return = Join-Path $msDynamicsSmbAlExtPath '/bin/linux'
+    }
 }
 
 function Get-ExternalLibraries {
@@ -548,7 +553,6 @@ function Get-ExternalLibraries {
 
     $libs = @()
 
-    # TODO: What about macOS (OS X) or Linux?
     $Global:MsDynamicsSmbAlExtPath = $msDynamicsSmbAlExtPath
     $Global:MsDynamicsSmbAlExtLibPath = Get-MsbAlExtBinariesPath -msDynamicsSmbAlExtPath $msDynamicsSmbAlExtPath
    
@@ -559,7 +563,6 @@ function Get-ExternalLibraries {
     $libs += Join-Path $libPath "Microsoft.AspNetCore.DataProtection.Extensions.dll"
     $libs += Join-Path $libPath "Microsoft.AspNetCore.Cryptography.Internal.dll"
     $libs += Join-Path $libPath "Microsoft.AspNetCore.Connections.Abstractions.dll"
-    #$libs += Join-Path $libPath "mscorlib.dll"
     $libs += Join-Path $libPath "System.dll"
     $libs += Join-Path $libPath "System.Runtime.dll"
     $libs += Join-Path $libPath "System.IO.FileSystem.dll"
@@ -614,13 +617,7 @@ function Get-ALDevCacheFileContent {
         $credentialReader = [ALCredentialCacheLibrary.ALCredentailCacheReader]
     }
 
-    if ($IsWindows) {
-        $SmbAlExtBinPath = Join-Path $SmbAlExtPath '\bin\win32\'
-    } elseif ($IsMacOS) {
-        $SmbAlExtBinPath = Join-Path $SmbAlExtPath '/bin/darwin'
-    } else {
-        $SmbAlExtBinPath = Join-Path $SmbAlExtPath '/bin/linux'
-    }
+    $SmbAlExtBinPath = Get-MsbAlExtBinariesPath -msDynamicsSmbAlExtPath $SmbAlExtPath
     $smbAlCacheFilePath = Join-Path $SmbAlExtBinPath $FileName
     
     if (-not (Test-Path $smbAlCacheFilePath)) {
@@ -648,14 +645,13 @@ function Get-NavUserPasswordCredentialsNotWorking {
         [string]$WebClientUrl
     )
 
-    #$purpose = @("Microsoft.Dynamics.Nav.Deployment", "UserPasswordCache.dat")
     $purpose = New-Object System.Collections.Generic.List[System.String]
     $purpose.Add('Microsoft.Dynamics.Nav.Deployment')
     $purpose.Add('UserPasswordCache.dat')
     $protectedFile = Join-Path $Global:MsDynamicsSmbAlExtLibPath $purpose[1]
     
-    #$dirInfo = New-Object System.IO.DirectoryInfo -ArgumentList $Global:MsDynamicsSmbAlExtLibPath
-    $dirInfo = New-Object "System.IO.DirectoryInfo, Version=6.0.0.0" -ArgumentList $Global:MsDynamicsSmbAlExtLibPath
+    $dirInfo = New-Object System.IO.DirectoryInfo -ArgumentList $Global:MsDynamicsSmbAlExtLibPath
+    #$dirInfo = New-Object "System.IO.DirectoryInfo, Version=6.0.0.0" -ArgumentList $Global:MsDynamicsSmbAlExtLibPath
     
     $provider = [Microsoft.AspNetCore.DataProtection.DataProtectionProvider]::Create($dirInfo)
     $protector = $provider.CreateProtector($purpose);
@@ -663,9 +659,6 @@ function Get-NavUserPasswordCredentialsNotWorking {
     $unprotectedValues = $protector.Unprotect($bytes);
     $unprotectedString = [System.Text.Encoding]::UTF8.GetString($unprotectedValues)
     Write-Host "Creds: $unprotectedString"
-
-
-    #[Microsoft.AspNetCore.DataProtection.DataProtectionProvider]::Create(()
 }
 
 function Get-SelectedBcVersion {
