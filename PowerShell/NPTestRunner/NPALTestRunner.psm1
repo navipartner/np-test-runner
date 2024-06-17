@@ -6,14 +6,9 @@ enum BcArtifactSource {
     Insider
 }
 
-#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psd1)
-#Import-Module (Join-Path $PSScriptRoot ClientContext\ClientContext.psm1)
-#. "$PSScriptRoot\ClientContext\ClientContextLibLoader.ps1" -BcLibVersion (Get-SelectedBcVersion)
 Import-Module (Join-Path $PSScriptRoot EntraIdAuth\EntraIdAuth.psm1)
 Import-Module (Join-Path $PSScriptRoot ALTestRunnerInternal.psm1)
 Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1)
-#Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psd1)
-#Import-Module (Join-Path $PSScriptRoot ALExtBridge\ALExtBridge.psm1)
 
 function Invoke-NPALTests {
     [CmdletBinding()]
