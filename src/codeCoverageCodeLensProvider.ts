@@ -38,7 +38,7 @@ export class CodeCoverageCodeLensProvider implements vscode.CodeLensProvider {
                             const totalLines: number = filterCodeCoverageByLineNoRange(objectCodeCoverage, startLineNumber, endLineNumber, true).length;
                             const hitLines: number = filterCodeCoverageByLineNoRange(objectCodeCoverage, startLineNumber, endLineNumber, false).length;
                         
-                            this.codeLenses.push(new vscode.CodeLens(methodRange.range, { title: `${getCodeCoveragePercentage(hitLines, totalLines)}% Coverage`, command: 'altestrunner.toggleCodeCoverage', arguments: [CodeCoverageDisplay.All] }));
+                            this.codeLenses.push(new vscode.CodeLens(methodRange.range, { title: `${getCodeCoveragePercentage(hitLines, totalLines)}% Coverage`, command: 'npaltestrunner.toggleCodeCoverage', arguments: [CodeCoverageDisplay.All] }));
 
                             if (index == methodRanges.length - 1) {
                                 resolve(this.codeLenses);

@@ -340,7 +340,7 @@ function Get-VSCodeExtensionInternalFolderPath {
     )
     
     $rootPath = Get-VSCodeExtensionRootPath
-    $internalPath = Join-Path $rootPath '.altestrunner'
+    $internalPath = Join-Path $rootPath '.npaltestrunner'
     if (!(Test-Path $internalPath)) {
         $null = New-Item $internalPath -ItemType Directory -Force
     }

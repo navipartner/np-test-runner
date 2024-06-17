@@ -532,7 +532,7 @@ async function outputTestResults(assemblies: ALTestAssembly[]): Promise<Boolean>
 			}
 		}
 
-        let statusBarItem = vscode.window.createStatusBarItem('altestrunner.summary', vscode.StatusBarAlignment.Right);
+        let statusBarItem = vscode.window.createStatusBarItem('npaltestrunner.summary', vscode.StatusBarAlignment.Right);
         let summaryText, backgroundColor: string;
 
 		if ((noOfFailures + noOfSkips) === 0) {

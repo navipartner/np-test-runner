@@ -7,7 +7,7 @@ function Get-PerformanceProfile {
     $ServiceUrl = Get-ServiceUrl -Method 'GetPerformanceProfile' -LaunchConfig $LaunchConfig
     $Credential = Get-ALTestRunnerCredential -LaunchConfig $LaunchConfig
 
-    $PerformanceProfilePath = './.altestrunner/PerformanceProfile.alcpuprofile'
+    $PerformanceProfilePath = './.npaltestrunner/PerformanceProfile.alcpuprofile'
 
     Write-Host "Downloading performance profile to $PerformanceProfilePath"
 

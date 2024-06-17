@@ -22,7 +22,7 @@
         },
         "codeCoveragePath": {
             "type": "string",
-            "description": "The path to save details of code coverage to e.g. .//.altestrunner//codecoverage.json"
+            "description": "The path to save details of code coverage to e.g. .//.npaltestrunner//codecoverage.json"
         },
         "testRunnerCodeunitId": {
             "type": "number",

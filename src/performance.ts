@@ -5,14 +5,14 @@ import { join } from 'path';
 
 let performanceStatusBarItem: vscode.StatusBarItem;
 
-const performanceProfileWatcher = vscode.workspace.createFileSystemWatcher('**/.altestrunner/PerformanceProfile.alcpuprofile');
+const performanceProfileWatcher = vscode.workspace.createFileSystemWatcher('**/.npaltestrunner/PerformanceProfile.alcpuprofile');
 performanceProfileWatcher.onDidChange(e => updatePerformanceStatusBarItemVisibility());
 performanceProfileWatcher.onDidCreate(e => updatePerformanceStatusBarItemVisibility());
 performanceProfileWatcher.onDidDelete(e => updatePerformanceStatusBarItemVisibility())
 
 export function createPerformanceStatusBarItem(): vscode.StatusBarItem {
     performanceStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
-    performanceStatusBarItem.command = 'altestrunner.showPerformanceProfile';
+    performanceStatusBarItem.command = 'npaltestrunner.showPerformanceProfile';
     performanceStatusBarItem.text = 'Performance ⏱️';
     performanceStatusBarItem.tooltip = 'Show the performance profile that was downloaded from the previous test run.'
     updatePerformanceStatusBarItemVisibility();

@@ -4,5 +4,6 @@ node_modules
 *.vsix
 .vscode/
 .altestrunner
+.npaltestrunner
 run.test.*.ps1
 *.cpuprofile

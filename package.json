@@ -16,7 +16,7 @@
 	"files": [
 		"PowerShell/"
 	],
-	"version": "0.25.8",
+	"version": "0.25.9",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -36,7 +36,7 @@
 	},
 	"pricing": "Free",
 	"activationEvents": [
-		"workspaceContains:.altestrunner",
+		"workspaceContains:.npaltestrunner",
 		"onLanguage:al"
 	],
 	"extensionDependencies": [
@@ -48,98 +48,98 @@
 			"editor/context": [
 				{
 					"when": "editorLangId == al",
-					"command": "altestrunner.showTableData",
+					"command": "npaltestrunner.showTableData",
 					"group": "NP AL Test Runner"
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "altestrunner.runAllTests",
+				"command": "npaltestrunner.runAllTests",
 				"title": "Run All Tests",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.runTestsCodeunit",
+				"command": "npaltestrunner.runTestsCodeunit",
 				"title": "Run Tests in Current Codeunit",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.runTest",
+				"command": "npaltestrunner.runTest",
 				"title": "Run Current Test",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.debugTest",
+				"command": "npaltestrunner.debugTest",
 				"title": "Debug Current Test",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.debugTestsCodeunit",
+				"command": "npaltestrunner.debugTestsCodeunit",
 				"title": "Debug Tests in Current Codeunit",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.clearTestResults",
+				"command": "npaltestrunner.clearTestResults",
 				"title": "Clear Test Results",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.openConfigFile",
+				"command": "npaltestrunner.openConfigFile",
 				"title": "Open Config File",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.installTestRunnerService",
+				"command": "npaltestrunner.installTestRunnerService",
 				"title": "Install Test Runner Service",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.toggleCodeCoverage",
+				"command": "npaltestrunner.toggleCodeCoverage",
 				"title": "Toggle Code Coverage",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.showTableData",
+				"command": "npaltestrunner.showTableData",
 				"title": "Show Table Data",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.showRelatedTests",
+				"command": "npaltestrunner.showRelatedTests",
 				"title": "Show Related Tests",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.listALFiles",
+				"command": "npaltestrunner.listALFiles",
 				"title": "List AL Files",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.showPerformanceProfile",
+				"command": "npaltestrunner.showPerformanceProfile",
 				"title": "Show Performance Profile",
 				"category": "NP AL Test Runner"
 			},
 			{
-				"command": "altestrunner.downloadClientSessionLibraries",
+				"command": "npaltestrunner.downloadClientSessionLibraries",
 				"title": "Download BC Client Session libraries",
 				"category": "NP AL Test Runner"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "altestrunner.runTest",
+				"command": "npaltestrunner.runTest",
 				"key": "Ctrl+Alt+T"
 			},
 			{
-				"command": "altestrunner.runAllTests",
+				"command": "npaltestrunner.runAllTests",
 				"key": "Ctrl+Alt+Shift+T"
 			},
 			{
-				"command": "altestrunner.debugTest",
+				"command": "npaltestrunner.debugTest",
 				"key": "Ctrl+Alt+D"
 			},
 			{
-				"command": "altestrunner.toggleCodeCoverage",
+				"command": "npaltestrunner.toggleCodeCoverage",
 				"key": "Ctrl+Alt+C"
 			}
 		],
@@ -288,7 +288,7 @@
 						"type": "string",
 						"scope": "resource",
 						"description": "The path to the JSON file which has details of the code coverage for this project",
-						"default": "./.altestrunner/codecoverage.json"
+						"default": "./.npaltestrunner/codecoverage.json"
 					},
 					"al-test-runner.codeCoverageExcludeFiles": {
 						"type": "string",
@@ -364,7 +364,7 @@
 		],
 		"jsonValidation": [
 			{
-				"fileMatch": ".altestrunner/config.json",
+				"fileMatch": ".npaltestrunner/config.json",
 				"url": "./syntaxes/configSyntax.json"
 			}
 		]

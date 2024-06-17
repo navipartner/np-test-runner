@@ -7,7 +7,7 @@ import { activeEditor } from './extension';
 import * as path from 'path';
 
 export function getALTestRunnerPath(): string {
-	const alTestRunnerPath = path.join(getTestFolderPath(), '.altestrunner');
+	const alTestRunnerPath = path.join(getTestFolderPath(), '.npaltestrunner');
 	return alTestRunnerPath;
 }
 
@@ -59,7 +59,7 @@ function createALTestRunnerConfig() {
 		companyName: "",
 		testSuiteName: "",
 		testRunnerServiceUrl: "",
-		codeCoveragePath: ".//.altestrunner//codecoverage.json",
+		codeCoveragePath: ".//.npaltestrunner//codecoverage.json",
 		culture: "en-US"
 	};
 

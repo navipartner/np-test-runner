@@ -30,8 +30,8 @@ export class TestCoverageCodeLensProvider implements vscode.CodeLensProvider {
                         title = title + 's';
                     };
 
-                    this.codeLenses.push(new vscode.CodeLens(methodRange.range, { title: `Run ${title}`, command: "altestrunner.runRelatedTests", arguments: [method] }));
-                    this.codeLenses.push(new vscode.CodeLens(methodRange.range, { title: `Show ${title}`, command: "altestrunner.showRelatedTests", arguments: [method] }));
+                    this.codeLenses.push(new vscode.CodeLens(methodRange.range, { title: `Run ${title}`, command: "npaltestrunner.runRelatedTests", arguments: [method] }));
+                    this.codeLenses.push(new vscode.CodeLens(methodRange.range, { title: `Show ${title}`, command: "npaltestrunner.showRelatedTests", arguments: [method] }));
                 }
             });
         }

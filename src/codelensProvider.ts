@@ -15,13 +15,13 @@ export class CodelensProvider implements vscode.CodeLensProvider {
         if (config.enableCodeLens) {
             const testMethodRanges = getTestMethodRangesFromDocument(document);
             testMethodRanges.forEach(testMethodRange => {
-                this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Run Test", command: "altestrunner.runTest", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Run this test with AL Test Runner" }));
-                this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Debug Test", command: "altestrunner.debugTest", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Debug this test with AL Test Runner" }));
+                this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Run Test", command: "npaltestrunner.runTest", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Run this test with AL Test Runner" }));
+                this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Debug Test", command: "npaltestrunner.debugTest", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Debug this test with AL Test Runner" }));
             });
 
             if (this.codeLenses.push.length > 0) {
-                this.codeLenses.push(new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), { title: "Run Tests", command: "altestrunner.runTestsCodeunit", arguments: [document.fileName], tooltip: "Run all tests in this codeunit with AL Test Runner" }));
-                this.codeLenses.push(new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), { title: "Debug Tests", command: "altestrunner.debugTestsCodeunit", arguments: [document.fileName], tooltip: "Run all tests in this codeunit with AL Test Runner" }));
+                this.codeLenses.push(new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), { title: "Run Tests", command: "npaltestrunner.runTestsCodeunit", arguments: [document.fileName], tooltip: "Run all tests in this codeunit with AL Test Runner" }));
+                this.codeLenses.push(new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), { title: "Debug Tests", command: "npaltestrunner.debugTestsCodeunit", arguments: [document.fileName], tooltip: "Run all tests in this codeunit with AL Test Runner" }));
             }
         }
 
