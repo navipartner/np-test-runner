@@ -16,7 +16,7 @@
 	"files": [
 		"PowerShell/"
 	],
-	"version": "0.25.9",
+	"version": "0.25.10",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -72,12 +72,14 @@
 			{
 				"command": "npaltestrunner.debugTest",
 				"title": "Debug Current Test",
-				"category": "NP AL Test Runner"
+				"category": "NP AL Test Runner",
+				"enablement": "false"
 			},
 			{
 				"command": "npaltestrunner.debugTestsCodeunit",
 				"title": "Debug Tests in Current Codeunit",
-				"category": "NP AL Test Runner"
+				"category": "NP AL Test Runner",
+				"enablement": "false"
 			},
 			{
 				"command": "npaltestrunner.clearTestResults",
@@ -92,12 +94,14 @@
 			{
 				"command": "npaltestrunner.installTestRunnerService",
 				"title": "Install Test Runner Service",
-				"category": "NP AL Test Runner"
+				"category": "NP AL Test Runner",
+				"enablement": "false"
 			},
 			{
 				"command": "npaltestrunner.toggleCodeCoverage",
 				"title": "Toggle Code Coverage",
-				"category": "NP AL Test Runner"
+				"category": "NP AL Test Runner",
+				"enablement": "false"
 			},
 			{
 				"command": "npaltestrunner.showTableData",
@@ -136,11 +140,13 @@
 			},
 			{
 				"command": "npaltestrunner.debugTest",
-				"key": "Ctrl+Alt+D"
+				"key": "Ctrl+Alt+D",
+				"when": "false"
 			},
 			{
 				"command": "npaltestrunner.toggleCodeCoverage",
-				"key": "Ctrl+Alt+C"
+				"key": "Ctrl+Alt+C",
+				"when": "false"
 			}
 		],
 		"configuration": [
@@ -299,13 +305,14 @@
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Outputs code coverage statistics with test results and decorates covered lines with the Toggle Code Coverage command. See also the Code Coverage Path extension setting and key in the AL Test Runner config.json file.",
-						"default": true
+						"default": false,
+						"anyOf": [false]
 					},
 					"al-test-runner.enablePerformanceProfiler": {
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Downloads performance profiler data for each test run.",
-						"default": true
+						"default": false
 					},
 					"al-test-runner.testFolderName": {
 						"type": "string",
