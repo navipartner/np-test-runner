@@ -272,7 +272,7 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 
 			powershellSession = new PowerShell(powershellOptions);
 
-			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
+			await powershellSession.invoke(`$ErrorActionPreference = "Stop"; $ErrorView = "DetailedView"`).then((result => {
 				console.log(result);
 			})).catch((error) => {
 				console.log(error);
