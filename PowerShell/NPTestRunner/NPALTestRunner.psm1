@@ -599,7 +599,7 @@ function Get-NavUserPasswordCredentials {
     if ($credsHashTable.Count -lt 1) {
         throw "You were not authenticated against $WebClientUrl yet or the cache has expired. Please, authenticate using the standard Microsoft AL development extension and try again."
     }
-    $record = $credsHashTable.Values[0]
+    $record = $($credsHashTable.Values)[0]
 
     return $record
 }
