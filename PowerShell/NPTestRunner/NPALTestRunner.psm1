@@ -56,7 +56,7 @@ function Invoke-NPALTests {
                 $global:ClientContextLoadedModuleVersion = $Version
             }
             catch {
-                Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
+                Invoke-PowerShellException [System.Exception]::new("Can't import ClientContext module for BC version $Version. Details: $_", $_.Exception)
             }
             finally {
                 Pop-Location
@@ -506,7 +506,7 @@ function Import-ClientContextModule {
         $global:ClientContextLoadedModuleVersion = $Version
     }
     catch {
-        Write-Error "Can't import ClientContext module for BC version $Version. Details: $_"
+        Invoke-PowerShellException [System.Exception]::new("Can't import ClientContext module for BC version $Version. Details: $_", $_.Exception)
     }
 }
 
