@@ -56,7 +56,7 @@ function Invoke-NPALTests {
                 $global:ClientContextLoadedModuleVersion = $Version
             }
             catch {
-                Invoke-PowerShellException [System.Exception]::new("Can't import ClientContext module for BC version $Version. Details: $_", $_.Exception)
+                throw $_
             }
             finally {
                 Pop-Location
@@ -141,7 +141,7 @@ function Invoke-NPALTests {
 
         Run-AlTests -ServiceUrl $serviceUrl @Params
     } catch {
-        Invoke-PowerShellException $_.Exception
+        Invoke-PowerShellException -ErrorRec $_
     }
 }
 
@@ -421,7 +421,7 @@ function Invoke-RipUnzip {
             throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
         }
     } catch {
-        Invoke-PowerShellException $_.Exception
+        Invoke-PowerShellException -ErrorRec $_
     } finally {
         $null = Pop-Location
     }
@@ -506,7 +506,7 @@ function Import-ClientContextModule {
         $global:ClientContextLoadedModuleVersion = $Version
     }
     catch {
-        Invoke-PowerShellException [System.Exception]::new("Can't import ClientContext module for BC version $Version. Details: $_", $_.Exception)
+        Invoke-PowerShellException -ErrorRec $_
     }
 }
 
@@ -709,10 +709,10 @@ function Invoke-PowerShellException {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [System.Exception]$Exception
+        [System.Management.Automation.ErrorRecord]$ErrorRec
     )
 
-    throw "PowerShell integration module exception in expected format: {{pwshexception}}{{$($_)}}{{$($_.ScriptStackTrace)}}{{$($_.Exception)}}"
+    throw "PowerShell integration module exception in expected format: {{pwshexception}}{{$($ErrorRec.Exception.Message)}}{{$($ErrorRec.ScriptStackTrace)}}{{$($ErrorRec.Exception)}}"
 }
 
 ##########################
