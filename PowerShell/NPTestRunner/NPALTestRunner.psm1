@@ -141,7 +141,7 @@ function Invoke-NPALTests {
 
         Run-AlTests -ServiceUrl $serviceUrl @Params
     } catch {
-        throw "$($_)`n$($_.ScriptStackTrace)`n$($_.Exception)"
+        Invoke-PowerShellException $_.Exception
     }
 }
 
@@ -236,7 +236,7 @@ function Get-ServiceUrlCredentialCacheKey {
         }
         Sandbox {
             # TODO: Base URL for SaaS maybe configurable?
-            throw "Not implemented yet!"
+            throw "Not implemented yet (Sandbox Credential Cache)!"
             $serviceUrl = 'https://businesscentral.dynamics.com/'
             $environmentName = Get-ValueFromLaunchJson -KeyName 'environmentName'
             $tenant = Get-ValueFromLaunchJson -KeyName 'tenant'
@@ -421,7 +421,7 @@ function Invoke-RipUnzip {
             throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
         }
     } catch {
-        throw $_.Exception
+        Invoke-PowerShellException $_.Exception
     } finally {
         $null = Pop-Location
     }
@@ -705,6 +705,16 @@ function Get-SelectedBcVersionLibPath {
     return $destPath
 }
 
+function Invoke-PowerShellException {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [System.Exception]$Exception
+    )
+
+    throw "PowerShell integration module exception in expected format: {{pwshexception}}{{$($_)}}{{$($_.ScriptStackTrace)}}{{$($_.Exception)}}"
+}
+
 ##########################
 # From BcContainerHelper #
 ##########################
@@ -714,7 +724,7 @@ function Parse-JWTtoken([string]$token) {
         while ($tokenPayload.Length % 4) { $tokenPayload += "=" }
         return [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($tokenPayload)) | ConvertFrom-Json
     }
-    throw "Invalid token"
+    throw "Invalid JWT token"
 }
 
 function Test-BcAuthContext {

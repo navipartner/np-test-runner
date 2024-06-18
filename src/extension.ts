@@ -272,7 +272,7 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 
 			powershellSession = new PowerShell(powershellOptions);
 
-			await powershellSession.invoke(`$ErrorActionPreference = "Stop"; $ErrorView = "DetailedView"`).then((result => {
+			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
 				console.log(result);
 			})).catch((error) => {
 				console.log(error);
@@ -315,13 +315,31 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 	}).catch((error) => {
 		let errorMsg = null;
 		let errorStack = null;
+		let errorException = null;
+		let hasErrorDetails = false;
 
-		try {
-			writeToOutputChannel(Buffer.from(powershellSession.history[0].stdout).toString());
+		try {			
 			errorMsg = extractPowerShellError(error.message);
 			errorStack = extractPowerShellError(error.stack);
+			
+			const errorSegments = tryToParsePowerShellComplexError(errorMsg);
+			if ((errorSegments) && (errorSegments.length == 4) && (errorSegments[0] == 'pwshexception')) {
+				errorMsg = errorSegments[1];
+				errorStack = errorSegments[2];
+				errorException = errorSegments[3];
+				hasErrorDetails = true;
+			}
+
 			writeToOutputChannel(`${command}  =>  ${errorMsg}`);
-			console.log(error);
+			writeToOutputChannel(`			  =>  ${errorStack}`);
+
+			if (hasErrorDetails) {
+				console.log(`${command}  =>  ${errorMsg}`);
+				console.log(`			  =>  ${errorStack}`);
+				console.log(`			  =>  ${errorException}`);
+			} else {
+				console.log(error);
+			}
 		} catch {
 			console.log(error);
 		}
@@ -342,63 +360,25 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 	});
 }
 
-async function checkAndLoadPowerShellModules() : Promise<void> {
-	if (powershellSession === null) {
-		try {					
-			let powershellOptions : PowerShellOptions = {
-				executable: PSExecutableType.PowerShellCore,
-				throwOnInvocationError: true,
-				executableOptions: {
-					'-NoLogo': true,
-					'-NoExit': true,
-					"-NonInteractive": true
-				}
-			}
-			powershellSession = new PowerShell(powershellOptions);
-
-			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
-				console.log(result);
-			})).catch((error) => {
-				console.log(error);
-				vscode.window.showErrorMessage(error);
-			});
-
-			let alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
-			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).then((result) => {
-				console.log(result);
-			}).catch((error) => {
-				vscode.window.showErrorMessage(error);
-			});
-
-			let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
-			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).then((result) => {
-				console.log(result);
-			}).catch((error) => {
-				vscode.window.showErrorMessage(error);
-			});
-			
-			let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
-			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).then((result) => {
-				console.log(result);
-			}).catch((error) => {
-				vscode.window.showErrorMessage(error);
-				//rejects(error);
-			});
-		} catch(e) {
-			powershellSession = null;
-			throw e;
-		}
-	} else {
-		return new Promise<void>((resolve) => {
-			resolve();
-		});
-	}
-}
-
 function extractPowerShellError(extractionString: string) : string {
 	let errorMsg = extractionString;
-	errorMsg = errorMsg.replaceAll('[31;1m', '').replaceAll('[0m', '').replaceAll('[36;1m', '');
+	errorMsg = errorMsg.replaceAll('[31;1m', '').replaceAll('[0m', '').replaceAll('[36;1m', '').replaceAll('\r\n', '');
 	return errorMsg;
+}
+
+function tryToParsePowerShellComplexError(errorMsg: string) : string[] {
+	// Use a regular expression to find all substrings within {{ }}
+	const pattern: RegExp = /{{(.*?)}}/gs;
+	const substrings: string[] = [];
+	let match: RegExpExecArray | null;
+
+	// Use RegExp.exec() to find all matches
+	while ((match = pattern.exec(errorMsg)) !== null) {
+		// match[1] contains the text within {{ }}
+		substrings.push(match[1]);
+	}
+
+	return substrings;
 }
 
 export function getSmbAlExtension() : vscode.Extension<any> {
