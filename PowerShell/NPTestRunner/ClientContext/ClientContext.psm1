@@ -122,8 +122,15 @@ class ClientContext {
         catch {
         }
     }
-    
+
     AwaitState([ClientSessionState] $state) {
+        $this.AwaitState($state, 15)
+    }
+    
+    AwaitState([ClientSessionState] $state, [int] $timeoutInSeconds) {
+        
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
         While ($this.clientSession.State -ne $state) {
             Start-Sleep -Milliseconds 100
             if ($this.clientSession.State -eq [ClientSessionState]::InError) {
@@ -135,7 +142,13 @@ class ClientContext {
             if ($this.clientSession.State -eq [ClientSessionState]::Uninitialized) {
                 throw "ClientSession is Uninitialized"
             }
+
+            if ($stopwatch.Elapsed.TotalSeconds -ge $timeoutInSeconds) {
+                throw "Timeout of $timeoutInSeconds seconds exceeded while waiting for client session state to change. Current state is '$($this.clientSession.State)' while expected state is '$state'"
+            }
         }
+
+        $stopwatch.Stop()
     }
     
     InvokeInteraction([ClientInteraction] $interaction) {
