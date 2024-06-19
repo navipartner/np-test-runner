@@ -510,7 +510,7 @@ async function outputTestResults(assemblies: ALTestAssembly[]): Promise<Boolean>
 			for (let test of assembly.collection[0].test) {
 				const testTime = parseFloat(test.$.time);
 				let filePath = '';
-				const codeunitName = assembly.$.name.substring(assembly.$.name.indexOf(' ') + 1);
+				const codeunitName = assembly.$.name;
                 const codeunitId = Number(assembly.$['x-code-unit']);
 				switch (test.$.result) {
 					case 'Pass':
