@@ -86,16 +86,20 @@ function getObjectNameFromText(declaration: string): string {
 }
 
 export async function getFilePathOfObject(object: ALObject, method?: string, files?: ALFile[]): Promise<string> {
-	return new Promise(async resolve => {
+	return new Promise((resolve, reject) => {
 		const alFile = getALFileForALObject(object, files);
 		if (alFile) {
 			const text = readFileSync(alFile.path, { encoding: 'utf-8' });
 			const matches = text.match(`procedure.*${method}`);
 			if (matches) {
-				const document = await vscode.workspace.openTextDocument(alFile.path);
-				const lineNo = document.positionAt(matches.index!).line + 1;
-				resolve(`${alFile.path}:${lineNo}`);
+				const document = vscode.workspace.openTextDocument(alFile.path);
+				document.then((result) => {
+					const lineNo = result.positionAt(matches.index!).line + 1;
+					resolve(`${alFile.path}:${lineNo}`);
+				});
 			}
+		} else {
+			reject('');
 		}
 	});
 }

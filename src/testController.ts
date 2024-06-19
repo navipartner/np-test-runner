@@ -511,17 +511,31 @@ async function outputTestResults(assemblies: ALTestAssembly[]): Promise<Boolean>
 				const testTime = parseFloat(test.$.time);
 				let filePath = '';
 				const codeunitName = assembly.$.name;
+                const codeunitNameNoPrefix = assembly.$.name.substring(assembly.$.name.indexOf(' ') + 1);
                 const codeunitId = Number(assembly.$['x-code-unit']);
+
+                filePath = await getFilePathOfObject({ type: 'codeunit', id: codeunitId, name: codeunitNameNoPrefix }, test.$.method)
+                .then((result) => {
+                    return result;
+                })
+                .catch(() => {
+                    return getFilePathOfObject({ type: 'codeunit', id: codeunitId, name: codeunitName }, test.$.method)
+                })
+                .then((result) => {
+                    return result;
+                })
+                .catch(() => {
+                    return `[Not able to find file name and line number for Codeunit id '${codeunitId}', name '${codeunitName}/${codeunitNameNoPrefix}']`;
+                })
+
 				switch (test.$.result) {
 					case 'Pass':
 						outputWriter.write('\t✅ ' + test.$.method + '\t' + testTime.toFixed(2) + 's');
 						break;
 					case 'Skip':
-						filePath = await getFilePathOfObject({ type: 'codeunit', id: codeunitId, name: codeunitName }, test.$.method);
 						outputWriter.write('\t❓ ' + test.$.method + '\t' + testTime.toFixed(2) + 's ' + filePath);
 						break;
 					case 'Fail':
-						filePath = await getFilePathOfObject({ type: 'codeunit', id: codeunitId, name: codeunitName }, test.$.method);
 						outputWriter.write('\t❌ ' + test.$.method + '\t' + testTime.toFixed(2) + "s " + filePath);
 						outputWriter.write('\t\t' + test.failure[0].message);
 						break;
