@@ -496,9 +496,9 @@ async function outputTestResults(assemblies: ALTestAssembly[]): Promise<Boolean>
 			noOfTests += parseInt(assembly.$.total);
 			const assemblyTime = parseFloat(assembly.$.time);
 			totalTime += assemblyTime;
-			const failed = parseInt(assembly.$.failed);
+			const failed = Number(assembly.$.failed) || 0;
 			noOfFailures += failed;
-			const skipped = parseInt(assembly.$.skipped);
+			const skipped = Number(assembly.$.skipped) || 0;
 			noOfSkips += skipped;
 
 			if (failed > 0) {
