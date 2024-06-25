@@ -15,6 +15,7 @@ namespace NaviPartner.ALTestRunner
         public const string AllTestsExecutedString = "All tests executed.";
         public const string DefaultTestSuite = "DEFAULT";
         public const int DefaultTestPage = 130455;
+        public const int DefaultTestRunnerCodeunit = 130450;
         public int TestPage { get; private set; }
         public string TestSuite { get; private set; }
         public TestRunner(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
@@ -23,7 +24,7 @@ namespace NaviPartner.ALTestRunner
         }
 
         public void SetupTestRun(int testPage = DefaultTestPage, string testSuite = DefaultTestSuite, string extensionId = "", string testCodeunitsRange = "",
-            string testProcedureRange = "", int testRunnerCodeunit = 130450, DisabledTest[] disabledTests = null, bool stabilityRun = false)
+            string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[] disabledTests = null, bool stabilityRun = false)
         {
             TestPage = TestPage;
             TestSuite = testSuite; ;

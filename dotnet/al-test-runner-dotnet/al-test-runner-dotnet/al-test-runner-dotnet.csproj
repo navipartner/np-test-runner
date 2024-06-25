@@ -5,6 +5,7 @@
     <RootNamespace>NaviPartner.ALTestRunner</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>NaviPartner.ALTestRunner</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,4 +15,8 @@
       <HintPath>libs\Microsoft.Dynamics.Framework.UI.Client.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\..\PowerShell\Libs\\&quot; /Y" />
+  </Target>
 </Project>

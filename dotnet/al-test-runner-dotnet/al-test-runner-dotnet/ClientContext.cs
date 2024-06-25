@@ -5,7 +5,7 @@ using Microsoft.Dynamics.Framework.UI.Client.Interactions;
 
 namespace NaviPartner.ALTestRunner
 {
-    public class ClientContext
+    public class ClientContext : IDisposable
     {
         protected ClientSession ClientSession { get; private set; }
         protected string Culture { get; private set; }
@@ -274,6 +274,18 @@ namespace NaviPartner.ALTestRunner
             if (throwError == true)
             {
                 throw new Exception(errorMsg);
+            }
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                CloseSession();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Can't close session: {e.Message}");
             }
         }
     }
