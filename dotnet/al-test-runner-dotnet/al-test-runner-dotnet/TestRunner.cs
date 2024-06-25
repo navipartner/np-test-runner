@@ -6,7 +6,10 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using BCClientLib.libs;
+using Newtonsoft.Json.Converters;
 using Microsoft.Dynamics.Framework.UI.Client;
+using Newtonsoft.Json;
+using System.Collections;
 
 namespace NaviPartner.ALTestRunner
 {
@@ -16,6 +19,11 @@ namespace NaviPartner.ALTestRunner
         public const string DefaultTestSuite = "DEFAULT";
         public const int DefaultTestPage = 130455;
         public const int DefaultTestRunnerCodeunit = 130450;
+        public const string DateTimeFormat = "s";
+        public const string FailureTestResultType = "1";
+        public const string SuccessTestResultType = "2";
+        public const string SkippedTestResultType = "3";
+        public const int NumberOfUnexpectedFailuresBeforeAborting = 50;
         public int TestPage { get; private set; }
         public string TestSuite { get; private set; }
         public TestRunner(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
@@ -53,17 +61,67 @@ namespace NaviPartner.ALTestRunner
             return testResultControl.StringValue;
         }
 
-        public void RunAllTests()
+        public ArrayList RunAllTests()
         {
-            bool runNextTest = true;
+            int numberOfUnexpectedFailures = 0;
+            ArrayList testRunResults = new ArrayList();
+            Object testRunResultObject = null;
 
-            while ( runNextTest )
+            do
             {
-                var testResult = RunNextTest();
-                Console.WriteLine(testResult);
-                Console.WriteLine();
-                runNextTest = (testResult != AllTestsExecutedString);
-            }
+                testRunResultObject = null;
+                var testStartTime = DateTime.Now;
+
+                try
+                {
+                    var testResult = RunNextTest();
+                    Console.WriteLine(testResult);
+                    Console.WriteLine();
+                    if (testResult == AllTestsExecutedString)
+                    {
+                        return testRunResults;
+                    }
+
+                    testRunResultObject = JsonConvert.DeserializeObject(testResult);
+
+                    // TODO: Rework the following with adding support for code coverage:
+                    //if($CodeCoverageTrackingType -ne 'Disabled') {
+                    //   $null = CollectCoverageResults -TrackingType $CodeCoverageTrackingType -OutputPath $CodeCoverageOutputPath -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl -CodeCoverageFilePrefix $CodeCoverageFilePrefix
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    numberOfUnexpectedFailures++;
+
+                    var stackTrace = ex.StackTrace;
+
+                    var testMethodResult = new
+                    {
+                        method = "Unexpected Failure",
+                        codeUnit = "Unexpected Failure",
+                        startTime = testStartTime.ToString(DateTimeFormat),
+                        finishTime = DateTime.Now.ToString(DateTimeFormat),
+                        result = FailureTestResultType,
+                        message = ex.Message,
+                        stackTrace = stackTrace
+                    };
+
+                    testRunResultObject = new
+                    {
+                        name = "Unexpected Failure",
+                        codeUnit = "UnexpectedFailure",
+                        startTime = testStartTime.ToString(DateTimeFormat),
+                        finishTime = DateTime.Now.ToString(DateTimeFormat),
+                        result = FailureTestResultType,
+                        testResults = testMethodResult
+                    };
+                }
+
+                testRunResults.Add(testRunResultObject);
+
+            } while ((testRunResultObject != null) && (NumberOfUnexpectedFailuresBeforeAborting > numberOfUnexpectedFailures));
+
+            throw new Exception("Expected to end the test execution, something went wrong with returning test results.");
         }
 
         public override void CloseSession()

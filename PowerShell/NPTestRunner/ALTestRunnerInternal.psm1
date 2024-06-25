@@ -1,5 +1,3 @@
-#using module .\ClientContext
-#using module .\ALExtBridge
 
 function Run-AlTestsInternal
 (
@@ -9,7 +7,7 @@ function Run-AlTestsInternal
     [string] $ExtensionId = "",
     [int] $TestRunnerId = $global:DefaultTestRunner,
     [ValidateSet('Windows','NavUserPassword','AAD')]
-    [string] $AutorizationType = $script:DefaultAuthorizationType,
+    [string] $AuthorizationType = $script:DefaultAuthorizationType,
     [string] $TestPage = $global:DefaultTestPage,
     [switch] $DisableSSLVerification,
     [Parameter(Mandatory=$true)]
@@ -30,63 +28,17 @@ function Run-AlTestsInternal
 )
 {
     $ErrorActionPreference = $script:DefaultErrorActionPreference
-   
-    Setup-TestRun -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -TestSuite $TestSuite -TestCodeunitsRange $TestCodeunitsRange -TestProcedureRange $TestProcedureRange -ExtensionId $ExtensionId -TestRunnerId $TestRunnerId -TestPage $TestPage -DisabledTests $DisabledTests -CodeCoverageTrackingType $CodeCoverageTrackingType -CodeCoverageTrackAllSessions:$CodeCoverageTrackAllSessions -CodeCoverageOutputPath $CodeCoverageOutputPath -CodeCoverageExporterId $CodeCoverageExporterId -ProduceCodeCoverageMap $ProduceCodeCoverageMap -StabilityRun $StabilityRun
+       
+    Open-ClientSessionDotNet -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl
+    
+    Setup-TestRunDotNet -TestSuite $TestSuite -TestCodeunitsRange $TestCodeunitsRange -TestProcedureRange $TestProcedureRange -ExtensionId $ExtensionId `
+        -TestRunnerId $TestRunnerId -TestPage $TestPage -DisabledTests $DisabledTests -CodeCoverageTrackingType $CodeCoverageTrackingType `
+        -CodeCoverageTrackAllSessions:$CodeCoverageTrackAllSessions -CodeCoverageOutputPath $CodeCoverageOutputPath -CodeCoverageExporterId $CodeCoverageExporterId `
+        -ProduceCodeCoverageMap $ProduceCodeCoverageMap -StabilityRun $StabilityRun
             
-    $testRunResults = New-Object System.Collections.ArrayList 
-    $testResult = ''
-    $numberOfUnexpectedFailures = 0;
+    $testRunResults = Run-AllTestsDotNet
 
-    do
-    {
-        try
-        {
-            $testStartTime = $(Get-Date)
-            $testResult = Run-NextTest -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -TestSuite $TestSuite
-            if($testResult -eq $script:AllTestsExecutedResult)
-            {
-                return [Array]$testRunResults
-            }
- 
-            $testRunResultObject = ConvertFrom-Json $testResult
-            if($CodeCoverageTrackingType -ne 'Disabled') {
-                $null = CollectCoverageResults -TrackingType $CodeCoverageTrackingType -OutputPath $CodeCoverageOutputPath -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl -CodeCoverageFilePrefix $CodeCoverageFilePrefix
-            }
-       }
-        catch
-        {
-            $numberOfUnexpectedFailures++
-
-            $stackTrace = $_.Exception.StackTrace + "Script stack trace: " + $_.ScriptStackTrace 
-            $testMethodResult = @{
-                method = "Unexpected Failure"
-                codeUnit = "Unexpected Failure"
-                startTime = $testStartTime.ToString($script:DateTimeFormat)
-                finishTime = ($(Get-Date).ToString($script:DateTimeFormat))
-                result = $script:FailureTestResultType
-                message = $_.Exception.Message
-                stackTrace = $stackTrace
-            }
-
-            $testRunResultObject = @{
-                name = "Unexpected Failure"
-                codeUnit = "UnexpectedFailure"
-                startTime = $testStartTime.ToString($script:DateTimeFormat)
-                finishTime = ($(Get-Date).ToString($script:DateTimeFormat))
-                result = $script:FailureTestResultType
-                testResults = @($testMethodResult)
-            }
-        }
-        
-        $testRunResults.Add($testRunResultObject) > $null
-        if($Detailed)
-        {
-            Print-TestResults -TestRunResultObject $testRunResultObject
-        }
-    }
-    until((!$testRunResultObject) -or ($NumberOfUnexpectedFailuresBeforeAborting -lt $numberOfUnexpectedFailures))
-
-    throw "Expected to end the test execution, something went wrong with returning test results."      
+    return $testRunResults
 }
 
 function CollectCoverageResults {
@@ -96,7 +48,7 @@ function CollectCoverageResults {
         [string] $OutputPath,
         [switch] $DisableSSLVerification,
         [ValidateSet('Windows','NavUserPassword','AAD')]
-        [string] $AutorizationType = $script:DefaultAuthorizationType,
+        [string] $AuthorizationType = $script:DefaultAuthorizationType,
         [Parameter(Mandatory=$false)]
         [pscredential] $Credential,
         [Parameter(Mandatory=$true)]
@@ -104,7 +56,7 @@ function CollectCoverageResults {
         [string] $CodeCoverageFilePrefix
     )
     try{
-        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl
+        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl
         $form = Open-TestForm -TestPage $TestPage -ClientContext $clientContext
         do {
             $clientContext.InvokeAction($clientContext.GetActionByName($form, "GetCodeCoverage"))
@@ -123,7 +75,7 @@ function CollectCoverageResults {
        
         if($ProduceCodeCoverageMap -ne 'Disabled') {
             $codeCoverageMapPath = Join-Path $OutputPath "TestCoverageMap"
-            SaveCodeCoverageMap -OutputPath $codeCoverageMapPath  -DisableSSLVerification:$DisableSSLVerification -AutorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl
+            SaveCodeCoverageMap -OutputPath $codeCoverageMapPath  -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl
         }
 
         $clientContext.CloseForm($form)
@@ -140,14 +92,14 @@ function SaveCodeCoverageMap {
         [string] $OutputPath,
         [switch] $DisableSSLVerification,
         [ValidateSet('Windows','NavUserPassword','AAD')]
-        [string] $AutorizationType = $script:DefaultAuthorizationType,
+        [string] $AuthorizationType = $script:DefaultAuthorizationType,
         [Parameter(Mandatory=$false)]
         [pscredential] $Credential,
         [Parameter(Mandatory=$true)]
         [string] $ServiceUrl
     )
     try{
-        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl
+        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl
         $form = Open-TestForm -TestPage $TestPage -ClientContext $clientContext
 
         $clientContext.InvokeAction($clientContext.GetActionByName($form, "GetCodeCoverageMap"))
@@ -257,7 +209,7 @@ function Setup-TestRun
 (
     [switch] $DisableSSLVerification,
     [ValidateSet('Windows','NavUserPassword','AAD')]
-    [string] $AutorizationType = $script:DefaultAuthorizationType,
+    [string] $AuthorizationType = $script:DefaultAuthorizationType,
     [Parameter(Mandatory=$false)]
     [pscredential] $Credential,
     [Parameter(Mandatory=$true)]
@@ -292,9 +244,9 @@ function Setup-TestRun
 
     try
     {
-        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl 
+        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl 
 
-        $form = Open-TestForm -TestPage $TestPage -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -ClientContext $clientContext
+        $form = Open-TestForm -TestPage $TestPage -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -ClientContext $clientContext
         Set-TestSuite -TestSuite $TestSuite -ClientContext $clientContext -Form $form
         Set-ExtensionId -ExtensionId $ExtensionId -Form $form -ClientContext $clientContext
         Set-TestCodeunits -TestCodeunitsFilter $TestCodeunitsRange -Form $form -ClientContext $clientContext
@@ -325,7 +277,7 @@ function Run-NextTest
 (
     [switch] $DisableSSLVerification,
     [ValidateSet('Windows','NavUserPassword','AAD')]
-    [string] $AutorizationType = $script:DefaultAuthorizationType,
+    [string] $AuthorizationType = $script:DefaultAuthorizationType,
     [Parameter(Mandatory=$false)]
     [pscredential] $Credential,
     [Parameter(Mandatory=$true)]
@@ -335,8 +287,8 @@ function Run-NextTest
 {
     try
     {
-        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -Credential $Credential -ServiceUrl $ServiceUrl
-        $form = Open-TestForm -TestPage $TestPage -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AutorizationType -ClientContext $clientContext
+        $clientContext = Open-ClientSessionWithWait -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl
+        $form = Open-TestForm -TestPage $TestPage -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -ClientContext $clientContext
         if($TestSuite -ne $script:DefaultTestSuite)
         {
             Set-TestSuite -TestSuite $TestSuite -ClientContext $clientContext -Form $form

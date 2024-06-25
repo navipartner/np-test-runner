@@ -9,6 +9,7 @@ enum BcArtifactSource {
 Import-Module (Join-Path $PSScriptRoot EntraIdAuth\EntraIdAuth.psm1)
 Import-Module (Join-Path $PSScriptRoot ALTestRunnerInternal.psm1)
 Import-Module (Join-Path $PSScriptRoot ALTestRunner.psm1)
+Import-Module (Join-Path $PSScriptRoot ClientContextDotNet)
 
 function Invoke-NPALTests {
     [CmdletBinding()]
@@ -80,7 +81,7 @@ function Invoke-NPALTests {
                 }
 
                 $Params.Add('Credential', $creds)
-                $Params.Add('AutorizationType', 'NavUserPassword')
+                $Params.Add('AuthorizationType', 'NavUserPassword')
             }
             Sandbox {
                 # Sandbox with AAD auth.
@@ -106,7 +107,7 @@ function Invoke-NPALTests {
                     $serviceUrl += "&company=$([Uri]::EscapeDataString($companyName))"
                 }
                 
-                $Params.Add('AutorizationType', 'AAD')
+                $Params.Add('AuthorizationType', 'AAD')
             }
             Default {
                 throw "Environment type '$environmentType' is not supported!"

@@ -292,6 +292,13 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 			}).catch((error) => {
 				vscode.window.showErrorMessage(error);
 			});
+
+			let npClientContextDotNetPath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'ClientContextDotNet', 'ClientContextDotNet.psm1');
+			await powershellSession.invoke(`Import-Module ${npClientContextDotNetPath}`).then((result) => {
+				console.log(result);
+			}).catch((error) => {
+				vscode.window.showErrorMessage(error);
+			});
 			
 			let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
 			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).then((result) => {

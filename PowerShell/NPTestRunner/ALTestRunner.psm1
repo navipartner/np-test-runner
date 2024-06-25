@@ -7,7 +7,7 @@ function Run-AlTests
     [ValidateSet("Disabled", "Codeunit")]
     [string] $TestIsolation = "Codeunit",
     [ValidateSet('Windows','NavUserPassword','AAD')]
-    [string] $AutorizationType = $script:DefaultAuthorizationType,
+    [string] $AuthorizationType = $script:DefaultAuthorizationType,
     [string] $TestPage = $global:DefaultTestPage,
     [switch] $DisableSSLVerification,
     [Parameter(Mandatory=$true)]
@@ -42,7 +42,7 @@ function Run-AlTests
         CodeCoverageOutputPath = $CodeCoverageOutputPath
         CodeCoverageFilePrefix = $CodeCoverageFilePrefix
         CodeCoverageExporterId = $CodeCoverageExporterId
-        AutorizationType = $AutorizationType
+        AuthorizationType = $AuthorizationType
         TestPage = $TestPage
         DisableSSLVerification = $DisableSSLVerification
         ServiceUrl = $ServiceUrl
