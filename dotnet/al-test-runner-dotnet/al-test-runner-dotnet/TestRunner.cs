@@ -52,20 +52,29 @@ namespace NaviPartner.ALTestRunner
             //CloseForm(form);
         }
 
-        public string RunNextTest()
+        public TestResult RunNextTest()
         {
+            TestResult resultObj = null;
             OpenTestForm(TestPage);
             SetTestSuite(OpenedForm, TestSuite);
             InvokeAction(GetActionByName(OpenedForm, "RunNextTest"));
             var testResultControl = GetControlByName(OpenedForm, "TestResultJson");
-            return testResultControl.StringValue;
+            string resultString = testResultControl.StringValue;
+            if (resultString == AllTestsExecutedString)
+            {
+                return null;
+            }
+
+            resultObj = JsonConvert.DeserializeObject<TestResult>(resultString);            
+            return resultObj;
         }
 
-        public ArrayList RunAllTests()
+        public Array RunAllTests()
         {
             int numberOfUnexpectedFailures = 0;
             ArrayList testRunResults = new ArrayList();
-            Object testRunResultObject = null;
+            TestResult testRunResultObject = null;
+            Exception firstException = null;
 
             do
             {
@@ -74,15 +83,13 @@ namespace NaviPartner.ALTestRunner
 
                 try
                 {
-                    var testResult = RunNextTest();
-                    Console.WriteLine(testResult);
+                    testRunResultObject = RunNextTest();
+                    Console.WriteLine(testRunResultObject);
                     Console.WriteLine();
-                    if (testResult == AllTestsExecutedString)
+                    if (testRunResultObject == null)
                     {
-                        return testRunResults;
+                        return testRunResults.ToArray();
                     }
-
-                    testRunResultObject = JsonConvert.DeserializeObject(testResult);
 
                     // TODO: Rework the following with adding support for code coverage:
                     //if($CodeCoverageTrackingType -ne 'Disabled') {
@@ -93,27 +100,32 @@ namespace NaviPartner.ALTestRunner
                 {
                     numberOfUnexpectedFailures++;
 
+                    if (firstException == null)
+                    {
+                        firstException = ex;
+                    }
+
                     var stackTrace = ex.StackTrace;
 
-                    var testMethodResult = new
+                    var testMethodResult = new TestMethodResult
                     {
-                        method = "Unexpected Failure",
-                        codeUnit = "Unexpected Failure",
-                        startTime = testStartTime.ToString(DateTimeFormat),
-                        finishTime = DateTime.Now.ToString(DateTimeFormat),
-                        result = FailureTestResultType,
-                        message = ex.Message,
-                        stackTrace = stackTrace
+                        Method = "Unexpected Failure",
+                        CodeUnit = "Unexpected Failure",
+                        StartTime = testStartTime.ToString(DateTimeFormat),
+                        FinishTime = DateTime.Now.ToString(DateTimeFormat),
+                        Result = FailureTestResultType,
+                        Message = ex.Message,
+                        StackTrace = stackTrace
                     };
 
-                    testRunResultObject = new
+                    testRunResultObject = new TestResult
                     {
-                        name = "Unexpected Failure",
-                        codeUnit = "UnexpectedFailure",
-                        startTime = testStartTime.ToString(DateTimeFormat),
-                        finishTime = DateTime.Now.ToString(DateTimeFormat),
-                        result = FailureTestResultType,
-                        testResults = testMethodResult
+                        Name = "Unexpected Failure",
+                        CodeUnit = "UnexpectedFailure",
+                        StartTime = testStartTime.ToString(DateTimeFormat),
+                        FinishTime = DateTime.Now.ToString(DateTimeFormat),
+                        Result = FailureTestResultType,
+                        TestResults = new List<TestMethodResult>() { testMethodResult }
                     };
                 }
 
@@ -121,7 +133,7 @@ namespace NaviPartner.ALTestRunner
 
             } while ((testRunResultObject != null) && (NumberOfUnexpectedFailuresBeforeAborting > numberOfUnexpectedFailures));
 
-            throw new Exception("Expected to end the test execution, something went wrong with returning test results.");
+            throw new Exception("Expected to end the test execution, something went wrong with returning test results.", firstException);
         }
 
         public override void CloseSession()
