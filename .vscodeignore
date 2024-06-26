@@ -9,4 +9,6 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 PowerShell/Tests/**
+.npaltestrunner/**
 **/run.test*.ps1
+dotnet/**
