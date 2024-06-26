@@ -702,7 +702,7 @@ export async function invokeCommandFromAlDevExtension(command: string, params?: 
 }
 
 export async function checkMissingButConfiguredClientSessionLibsAndDownload() : Promise<any> {
-	const selectedBcVersion = getALTestRunnerConfigKeyValue('SelectedBcVersion');
+	const selectedBcVersion = getALTestRunnerConfigKeyValue('selectedBcVersion');
 	if (selectedBcVersion == null || (selectedBcVersion.trim().length === 0)) {
 		return new Promise<any>((resolve) => {
 			// No version configured yet.
