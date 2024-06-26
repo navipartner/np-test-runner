@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using BCClientLib.libs;
 using Newtonsoft.Json.Converters;
 using Microsoft.Dynamics.Framework.UI.Client;
 using Newtonsoft.Json;

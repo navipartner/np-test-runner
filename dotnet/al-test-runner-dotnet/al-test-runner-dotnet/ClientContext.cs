@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System.Dynamic;
+using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using Microsoft.Dynamics.Framework.UI.Client;
 using Microsoft.Dynamics.Framework.UI.Client.Interactions;
@@ -13,12 +15,11 @@ namespace NaviPartner.ALTestRunner
         protected string OpenedFormName { get; private set; }
         private ClientLogicalForm PsTestRunnerCaughtForm;
         
-
         public ClientContext(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
             TimeSpan interactionTimeout, string culture) : base()
         {
             Initialize(serviceUrl, authenticationScheme, credential, interactionTimeout, culture);
-        }
+        }    
 
         public void Initialize(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
             TimeSpan interactionTimeout, string culture)
@@ -108,9 +109,14 @@ namespace NaviPartner.ALTestRunner
                         throw new Exception("ClientSession is Unitialized");
                 }
 
-                if (this.ClientSession.LastException != null)
+                // ClientSession.LastException is present on the latest versions, not for BC 17 and maybe some highers too.
+                dynamic session = this.ClientSession;
+                if (HasProperty(session, "LastException"))
                 {
-                    Console.WriteLine(this.ClientSession.LastException.Message);
+                    Console.WriteLine(session.LastException.Message);
+                } else
+                {
+                    // TODO: ???
                 }
             }
         }
@@ -287,6 +293,13 @@ namespace NaviPartner.ALTestRunner
             {
                 Console.WriteLine($"Can't close session: {e.Message}");
             }
+        }
+
+        public static bool HasProperty(object obj, string propertyName)
+        {
+            if (obj == null) return false;
+
+            return obj.GetType().GetProperty(propertyName) != null;
         }
     }
 }

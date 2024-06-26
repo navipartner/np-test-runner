@@ -13,6 +13,7 @@
     <PackageReference Include="System.ServiceModel.Primitives" Version="8.0.0" />
     <Reference Include="Microsoft.Dynamics.Framework.UI.Client">
       <HintPath>libs\Microsoft.Dynamics.Framework.UI.Client.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
 

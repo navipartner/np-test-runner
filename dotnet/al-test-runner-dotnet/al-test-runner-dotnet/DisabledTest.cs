@@ -10,6 +10,6 @@ namespace NaviPartner.ALTestRunner
     {
         public int CodeunitID { get; set; }
         public string CodeunitName { get; set; }
-        public string Method {  get; set; }
+        public string Method { get; set; }
     }
 }
