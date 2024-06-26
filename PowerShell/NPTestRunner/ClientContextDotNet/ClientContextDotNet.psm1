@@ -148,7 +148,8 @@ function Run-AllTestsDotNet {
 
 [NaviPartner.ALTestRunner.TestRunner]$Global:Runner = $null
 
-$script:DefaultTcpKeepActive = [timespan]::FromMinutes(2);
-$script:DefaultTransactionTimeout = [timespan]::FromMinutes(10);
+# https://learn.microsoft.com/en-us/dotnet/api/system.net.servicepointmanager.settcpkeepalive?view=net-8.0
+$script:DefaultTcpKeepActive = [timespan]::FromMinutes(120);
+$script:DefaultTransactionTimeout = [timespan]::FromMinutes(30);
 
 Export-ModuleMember -Function *

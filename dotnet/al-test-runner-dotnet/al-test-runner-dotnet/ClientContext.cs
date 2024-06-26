@@ -24,7 +24,8 @@ namespace NaviPartner.ALTestRunner
         public void Initialize(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
             TimeSpan interactionTimeout, string culture)
         {
-            ServicePointManager.SetTcpKeepAlive(true, (int)TimeSpan.FromMinutes(30).TotalMilliseconds, (int)TimeSpan.FromMinutes(30).TotalMilliseconds);
+            // https://learn.microsoft.com/en-us/dotnet/api/system.net.servicepointmanager.settcpkeepalive?view=net-8.0
+            ServicePointManager.SetTcpKeepAlive(true, (int)TimeSpan.FromMinutes(120).TotalMilliseconds, (int)TimeSpan.FromSeconds(10).TotalMilliseconds);
             SslVerification.Disable();
 
             var clientServicesUrl = serviceUrl;
