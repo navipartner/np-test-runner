@@ -428,6 +428,27 @@ function Invoke-RipUnzip {
     }
 }
 
+function Invoke-HttpZipStreamExtraction {    
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]$Uri,
+        [Parameter(Mandatory=$true)]
+        [string]$DestinationPath,
+        [string]$ExtractionFilter
+    )
+    
+    $null = Push-Location
+    
+    try {
+        [NaviPartner.ALTestRunner.HttpZipStream.HttpZipClient]::ExtractFile($Uri, $DestinationPath, $ExtractionFilter)
+    } catch {
+        Invoke-PowerShellException -ErrorRec $_
+    } finally {
+        $null = Pop-Location
+    }
+}
+
 function Get-ClientSessionLibrariesFromBcArtifacts {
     [CmdletBinding()]
     param (
@@ -445,7 +466,9 @@ function Get-ClientSessionLibrariesFromBcArtifacts {
         $null = New-Item -Path $destPath -ItemType Directory -Force
     }
 
-    Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'?pplications\*\?est?unner\?nternal\*.dll'"
+    #Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'?pplications\*\?est?unner\?nternal\*.dll'"
+    Invoke-HttpZipStreamExtraction -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "(?i)Applications\\testframework\\TestRunner\\Internal\\.*\.dll$"
+
 
     if (-not ($IsWindows)) {
         Restore-DownloadedFileNames -FolderPath $destPath
