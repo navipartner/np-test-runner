@@ -362,72 +362,6 @@ function Get-VSCodeExtensionClientContextLibsRootPath {
     return $path
 }
 
-function  Get-RipUnzipExeFilePath {
-    [CmdletBinding()]
-    param (
-    )
-
-    $vsCodeExtRootPath = Get-VSCodeExtensionRootPath
-    if ($IsWindows) {
-        $ripUnzipExeFileName = 'ripunzip.exe'
-        $ripUnzipSubfolder = 'win32'
-    } elseif ($IsMacOS) {
-        $ripUnzipExeFileName = 'ripunzip'
-        $ripUnzipSubfolder = 'darwin'
-    } else {
-        $ripUnzipExeFileName = 'ripunzip'
-        $ripUnzipSubfolder = 'ubuntu'
-    }
-    
-    $ripUnzipPath = Join-Path $vsCodeExtRootPath '.bin' -AdditionalChildPath 'ripunzip', $ripUnzipSubfolder, $ripUnzipExeFileName
-
-    if (!$IsWindows) {
-        # Not sure if ([System.IO.UnixFileMode]::GroupExecute) or ([System.IO.UnixFileMode]::OtherExecute) should be 
-        # considered too, but I am leaving as it is now (the user probably has its own installation).
-        if (-not (Get-Item $ripUnzipPath).UnixFileMode.HasFlag([System.IO.UnixFileMode]::UserExecute)) {
-            Write-Host "Setting up chmod +x for ripunzip file."
-            Invoke-Expression "chmod +x $ripUnzipPath"
-        }
-        
-    }
-
-    if (!(Test-Path $ripUnzipPath)) {
-        throw "'$ripUnzipExeFileName' path $ripUnzipPath doesn't exist!"
-    }
-
-    return $ripUnzipPath
-}
-
-function Invoke-RipUnzip {    
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$Uri,
-        [Parameter(Mandatory=$true)]
-        [string]$DestinationPath,
-        [string]$ExtractionFilter
-    )
-    
-    $ripUnzipPath = Get-RipUnzipExeFilePath
-    $ripUnzipFolderPath = Split-Path $ripUnzipPath
-    $ripUnzipExe = Split-Path $ripUnzipPath -Leaf
-    
-    $null = Push-Location
-    
-    try {
-        $null = Set-Location $ripUnzipFolderPath
-        $cmd = "$ripUnzipPath unzip-uri -d $DestinationPath $Uri $ExtractionFilter"
-        Invoke-Expression -Command $cmd
-        if (!($?)) {
-            throw "'ripunzip' execution error. If you do not see any error in the terminal, please, try to execute $ripUnzipPath manually and see the error."
-        }
-    } catch {
-        Invoke-PowerShellException -ErrorRec $_
-    } finally {
-        $null = Pop-Location
-    }
-}
-
 function Invoke-HttpZipStreamExtraction {    
     [CmdletBinding()]
     param (
@@ -466,50 +400,7 @@ function Get-ClientSessionLibrariesFromBcArtifacts {
         $null = New-Item -Path $destPath -ItemType Directory -Force
     }
 
-    #Invoke-RipUnzip -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "'?pplications\*\?est?unner\?nternal\*.dll'"
     Invoke-HttpZipStreamExtraction -Uri $BcArtifactSourceUrl -DestinationPath $destPath -ExtractionFilter "(?i)Applications\\testframework\\TestRunner\\Internal\\.*\.dll$"
-
-
-    if (-not ($IsWindows)) {
-        Restore-DownloadedFileNames -FolderPath $destPath
-    }
-}
-
-<#
-.SYNOPSIS
-This should be used only on Unix-based OS versions (this is the principal idea of the cmdlet).
-.DESCRIPTION
-ripunzip sees the files included in BC artifacts in this format:
-    Applications\testframework\TestRunner\Internal\ALTestRunnerInternal.psm1
-    Applications\testframework\TestRunner\Internal\AadTokenProvider.ps1
-    Applications\testframework\TestRunner\Internal\BCPTTestRunnerInternal.psm1
-    Applications\testframework\TestRunner\Internal\ClientContext.ps1
-    Applications\testframework\TestRunner\Internal\Microsoft.Dynamics.Framework.UI.Client.dll
-    Applications\testframework\TestRunner\Internal\Microsoft.IdentityModel.Clients.ActiveDirectory.dll
-    Applications\testframework\TestRunner\Internal\Newtonsoft.Json.dll
-    Applications\testframework\TestRunner\Internal\System.ServiceModel.Primitives.dll
-And then when downloading, it stores them in the same way which creates on linux files with wrong names including
-the path as part of the name.
-There is no way how to change the naming so we have cleanup the file names.
-#>
-function Restore-DownloadedFileNames {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$FolderPath
-    )
-
-    $files = Get-ChildItem $FolderPath;
-    foreach ($file in $files) {
-        $i = $file.Name.LastIndexOf('\')
-        if ($i -ge 0) {
-            $newName = $file.Name.Remove(0, $i)
-            $newPath = (Join-Path $FolderPath $newName)
-            [System.IO.File]::Copy($file.FullName, $newPath, $true)
-            $null = Test-Path $newPath
-            [System.IO.File]::Delete($file.FullName)
-        }
-    }
 }
 
 function Import-ClientContextModule {
