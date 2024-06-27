@@ -137,6 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(alTestController);
 	discoverTests();
 
+	getALTestRunnerConfig();
 	checkMissingButConfiguredClientSessionLibsAndDownload().catch((error) => {
 		vscode.window.showInformationMessage('Please reload the window to activate the extension.', 'Reload')
         .then(selection => {
