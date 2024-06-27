@@ -2,14 +2,14 @@ import * as vscode from 'vscode';
 import * as types from './types';
 import * as path from 'path';
 import * as fetch from 'node-fetch'; 
-import { invokePowerShellCmd, getSmbAlExtensionPath } from './extension';
+import { invokePowerShellCmd, getSmbAlExtensionPath, getExtension } from './extension';
 import { DOMParser } from 'xmldom';
 import { InvocationResult } from 'node-powershell';
 import * as fs from 'fs';
 import { getALTestRunnerConfigKeyValue } from './config';
 import { version } from 'os';
 
-const cslibFolderName = 'CSLib';
+const cslibFolderName = 'CSLibs';
 
 async function fetchVersions(sourceUrl: string, filter: string): Promise<string[]> {
     let requestUrl = `${sourceUrl}?comp=list&restype=container`;
@@ -197,24 +197,15 @@ export function getBcArtifactsUrl(artifactsSource: types.BcArtifactSource, artif
 /// The function is considered as a fast automated check. The user still have a chance to 
 /// (re)download the libraries manually if needed.
 export async function checkAndDownloadMissingDlls(version: string) : Promise<any> {
-	const extPath = getSmbAlExtensionPath();
-	const libFolderPath = path.join(extPath, cslibFolderName, version);
+	const extPath = getExtension().extensionPath
+	const libFolderPath = path.join(extPath, '.npaltestrunner', cslibFolderName, version);
 
 	let someContentExist = false;
 	if (fs.existsSync(libFolderPath)) {
-		await fs.readdir(libFolderPath, function(err, files) {
-			if (err) {
-			   console.log(`Test existing content in folder ${libFolderPath} failed.`);
-			   throw err;
-			} else {
-			   if (!files.length) {
-				   	// directory appears to be empty
-					someContentExist = false;
-			   } else {
-					someContentExist = true;
-			   }
-			}
-		});
+		let files = fs.readdirSync(libFolderPath);
+		if (files.length > 0) {
+			someContentExist = true;
+		}
 	}
 
 	if (someContentExist) {
