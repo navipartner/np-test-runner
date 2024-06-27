@@ -240,28 +240,8 @@ namespace NaviPartner.ALTestRunner.HttpZipStream
 
                         using (var deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress))
                         {
-                            await deflateStream.ReadAsync(deflatedArray, 0, deflatedArray.Length);
+                            deflatedArray = CopyStreamToArray(deflateStream);
                         }
-
-                        /*
-                        using (var deflatedStream = new MemoryStream())
-                        {
-                           var deflater = new System.IO.Compression.DeflateStream(compressedStream, CompressionMode.Decompress, true);                     
-
-                           byte[] buffer = new byte[1024];
-                           var bytesPending = entry.UncompressedSize;
-                           while (bytesPending > 0)
-                           {
-                              var bytesRead = deflater.Read(buffer, 0, (int)Math.Min(bytesPending, buffer.Length));
-                              deflatedStream.Write(buffer, 0, bytesRead);
-                              bytesPending -= (uint)bytesRead;
-                              if (bytesRead == 0) { break; }
-                           }                    
-
-                           deflatedArray = deflatedStream.ToArray();
-                        }
-                         */
-
                     }
                     return deflatedArray;
                 }
@@ -270,6 +250,18 @@ namespace NaviPartner.ALTestRunner.HttpZipStream
                 throw new NotSupportedException($"The compression method [{entry.CompressionMethod}] is not supported");
             }
             catch (Exception) { throw; }
+        }
+
+        public static byte[] CopyStreamToArray(Stream inputStream)
+        {
+            if (inputStream == null)
+                throw new ArgumentNullException(nameof(inputStream));
+
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                inputStream.CopyTo(memoryStream);
+                return memoryStream.ToArray();
+            }
         }
 
 
