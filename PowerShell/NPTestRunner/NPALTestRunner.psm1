@@ -378,7 +378,6 @@ function Invoke-HttpZipStreamExtraction {
         $result = [NaviPartner.ALTestRunner.HttpZipStream.HttpZipClient]::ExtractFileAsync($Uri, $DestinationPath, $ExtractionFilter)
         do {
             Start-Sleep -Milliseconds 250
-            $result
         } while (!$result.IsCompleted)
 
         if ($result.IsFaulted) {
