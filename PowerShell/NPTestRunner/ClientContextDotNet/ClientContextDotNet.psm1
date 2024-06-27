@@ -1,6 +1,4 @@
 #requires -Version 5.0
-using namespace Microsoft.Dynamics.Framework.UI.Client
-using namespace Microsoft.Dynamics.Framework.UI.Client.Interactions
 
 function Open-ClientSessionDotNet
 (
@@ -31,14 +29,15 @@ function Open-ClientSessionDotNet
         }
     }
 
-    [AuthenticationScheme]$authScheme = [AuthenticationScheme]::UserNamePassword;
+    [string]$authScheme = "UserNamePassword";
 
     switch ($AuthorizationType) {
-        Windows { $authScheme = [AuthenticationScheme]::Windows; break; }
-        AAD { $authScheme = [AuthenticationScheme]::AzureActiveDirectory; break; }
-        Default { $authScheme = [AuthenticationScheme]::UserNamePassword; break; }
+        Windows { $authScheme = "Windows"; break; }
+        AAD { $authScheme = "AzureActiveDirectory"; break; }
+        Default { $authScheme = "UserNamePassword"; break; }
     }
 
+    #[NaviPartner.ALTestRunner.AssemblyResolver]::SetupAssemblyResolve("Microsoft.Dynamics.Framework.UI.Client", path-to-libs)
     $Global:Runner = [NaviPartner.ALTestRunner.TestRunner]::new($ServiceUrl, $authScheme, $Credential, $TransactionTimeout, $Culture)
 }
 

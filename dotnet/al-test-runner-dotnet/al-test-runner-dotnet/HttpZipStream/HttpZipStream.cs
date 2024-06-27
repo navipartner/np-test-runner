@@ -260,7 +260,8 @@ namespace NaviPartner.ALTestRunner.HttpZipStream
             using (MemoryStream memoryStream = new MemoryStream())
             {
                 inputStream.CopyTo(memoryStream);
-                return memoryStream.ToArray();
+                var byteArray = memoryStream.ToArray();
+                return byteArray;
             }
         }
 

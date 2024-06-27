@@ -25,9 +25,9 @@ namespace NaviPartner.ALTestRunner
         public const int NumberOfUnexpectedFailuresBeforeAborting = 50;
         public int TestPage { get; private set; }
         public string TestSuite { get; private set; }
-        public TestRunner(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
-            TimeSpan interactionTimeout, string culture) : base(serviceUrl, authenticationScheme, credential, interactionTimeout, culture) 
-        { 
+        public TestRunner(string serviceUrl, string authenticationScheme, ICredentials credential,
+            TimeSpan interactionTimeout, string culture) : base(serviceUrl, authenticationScheme, credential, interactionTimeout, culture)
+        {
         }
 
         public void SetupTestRun(int testPage = DefaultTestPage, string testSuite = DefaultTestSuite, string extensionId = "", string testCodeunitsRange = "",

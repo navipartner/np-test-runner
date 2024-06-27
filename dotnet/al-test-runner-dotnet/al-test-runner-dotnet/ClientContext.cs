@@ -19,7 +19,14 @@ namespace NaviPartner.ALTestRunner
             TimeSpan interactionTimeout, string culture) : base()
         {
             Initialize(serviceUrl, authenticationScheme, credential, interactionTimeout, culture);
-        }    
+        }
+
+        public ClientContext(string serviceUrl, string authenticationScheme, ICredentials credential,
+            TimeSpan interactionTimeout, string culture) : base()
+        {
+            AuthenticationScheme auth = (AuthenticationScheme)Enum.Parse(typeof(AuthenticationScheme), authenticationScheme);
+            Initialize(serviceUrl, auth, credential, interactionTimeout, culture);
+        }
 
         public void Initialize(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
             TimeSpan interactionTimeout, string culture)
@@ -114,7 +121,10 @@ namespace NaviPartner.ALTestRunner
                 dynamic session = this.ClientSession;
                 if (HasProperty(session, "LastException"))
                 {
-                    Console.WriteLine(session.LastException.Message);
+                    if (session.LastException != null) {
+                        //throw new Exception(GetProperty(session, "LastException").ToString());
+                        throw new Exception(session.LastException.Message);
+                    }
                 } else
                 {
                     // TODO: ???
@@ -301,6 +311,13 @@ namespace NaviPartner.ALTestRunner
             if (obj == null) return false;
 
             return obj.GetType().GetProperty(propertyName) != null;
+        }
+
+        public static object GetProperty(object obj, string propertyName)
+        {
+            if (obj == null) return false;
+
+            return obj.GetType().GetProperty(propertyName).GetValue(obj);
         }
     }
 }
