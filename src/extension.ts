@@ -21,6 +21,8 @@ import { createPerformanceStatusBarItem } from './performance';
 import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError } from 'node-powershell';
 import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
 import * as path from 'path';
+import { exec } from 'child_process';
+import * as semver from 'semver';
 
 let terminal: vscode.Terminal;
 let debugChannel: vscode.OutputChannel;
@@ -70,6 +72,8 @@ export let telemetryReporter: TelemetryReporter;
 
 export function activate(context: vscode.ExtensionContext) {
 	console.log('navipartner.np-al-test-runner extension is activated');
+
+	checkAllExternalPrerequisites();
 
 	let codelensProvider = new CodelensProvider();
 	vscode.languages.registerCodeLensProvider("*", codelensProvider);
@@ -711,6 +715,64 @@ export async function checkMissingButConfiguredClientSessionLibsAndDownload() : 
 	}
 
 	return await checkAndDownloadMissingDlls(selectedBcVersion);
+}
+
+function checkPowerShellVersion(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        exec('pwsh -v', (error, stdout, stderr) => {
+            if (error) {
+                reject(`Error executing PowerShell: ${error.message}`);
+            } else {
+                resolve(extractSemver(stdout.trim()));
+            }
+        });
+    });
+}
+
+function checkDotNetVersion(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        exec('dotnet --version', (error, stdout, stderr) => {
+            if (error) {
+                reject(`Error checking .NET version: ${error.message}`);
+            } else {
+                resolve(extractSemver(stdout.trim()));
+            }
+        });
+    });
+}
+
+function checkAllExternalPrerequisites() {
+	
+	const requiredPSVersion = '7.0.0';
+    const requiredDotNetVersion = '5.0.0';
+
+	Promise.all([checkPowerShellVersion(), checkDotNetVersion()])
+        .then(([psVersion, dotNetVersion]) => {
+			if (compareVersions(requiredPSVersion, psVersion)) {
+                console.log(`PowerShell version ${psVersion} meets the requirement.`);
+            } else {
+                vscode.window.showErrorMessage(`PowerShell version ${psVersion} does not meet the required version ${requiredPSVersion}.`);
+            }
+
+			if (compareVersions(requiredDotNetVersion, dotNetVersion)) {
+                console.log(`.NET version ${dotNetVersion} meets the requirement.`);
+            } else {
+                vscode.window.showErrorMessage(`.NET version ${dotNetVersion} does not meet the required version ${requiredDotNetVersion}.`);
+            }
+        })
+        .catch(error => {
+            vscode.window.showErrorMessage(`Requirement check failed: ${error}`);
+        });
+}
+
+function compareVersions(requiredVersion: string, actualVersion: string): boolean {
+    return semver.gte(actualVersion, requiredVersion);
+}
+
+function extractSemver(input: string): string | null {
+    const semverRegex = /\b\d+\.\d+\.\d+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?\b/;
+    const match = input.match(semverRegex);
+    return match ? match[0] : null;
 }
 
 //// NEW POWERSHELL INTEGRATION ///
