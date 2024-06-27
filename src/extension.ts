@@ -743,7 +743,7 @@ function checkDotNetVersion(): Promise<string> {
 
 function checkAllExternalPrerequisites() {
 	
-	const requiredPSVersion = '7.0.0';
+	const requiredPSVersion = '10.0.0';
     const requiredDotNetVersion = '5.0.0';
 
 	Promise.all([checkPowerShellVersion(), checkDotNetVersion()])
@@ -751,13 +751,17 @@ function checkAllExternalPrerequisites() {
 			if (compareVersions(requiredPSVersion, psVersion)) {
                 console.log(`PowerShell version ${psVersion} meets the requirement.`);
             } else {
-                vscode.window.showErrorMessage(`PowerShell version ${psVersion} does not meet the required version ${requiredPSVersion}.`);
+                showMissingPrerequisiteErrorMessage(
+					`PowerShell version ${psVersion} does not meet the required version ${requiredPSVersion}.`, 
+					'https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell');
             }
 
 			if (compareVersions(requiredDotNetVersion, dotNetVersion)) {
                 console.log(`.NET version ${dotNetVersion} meets the requirement.`);
             } else {
-                vscode.window.showErrorMessage(`.NET version ${dotNetVersion} does not meet the required version ${requiredDotNetVersion}.`);
+				showMissingPrerequisiteErrorMessage(
+                	`.NET version ${dotNetVersion} does not meet the required version ${requiredDotNetVersion}.`,
+					'https://dotnet.microsoft.com/en-us/download');
             }
         })
         .catch(error => {
@@ -773,6 +777,14 @@ function extractSemver(input: string): string | null {
     const semverRegex = /\b\d+\.\d+\.\d+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?\b/;
     const match = input.match(semverRegex);
     return match ? match[0] : null;
+}
+
+function showMissingPrerequisiteErrorMessage(message: string, link: string) {
+    vscode.window.showErrorMessage(message, 'Learn More').then(selection => {
+        if (selection === 'Learn More') {
+            vscode.env.openExternal(vscode.Uri.parse(link));
+        }
+    });
 }
 
 //// NEW POWERSHELL INTEGRATION ///
