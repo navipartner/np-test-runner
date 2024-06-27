@@ -16,7 +16,7 @@ namespace NaviPartner.ALTestRunner
                 if (args.Name.Contains(searchPattern))
                 {
                     var assemblyFileName = args.Name.Split(',')[0];
-                    var filePath = FindFileInTheDirectoryScope(assemblyFileName, directoryPath);
+                    var filePath = FindFileInTheDirectoryScope($"{assemblyFileName}.dll", directoryPath);
                     return Assembly.LoadFrom(filePath);
                 }
                 return null;
