@@ -375,7 +375,15 @@ function Invoke-HttpZipStreamExtraction {
     $null = Push-Location
     
     try {
-        [NaviPartner.ALTestRunner.HttpZipStream.HttpZipClient]::ExtractFile($Uri, $DestinationPath, $ExtractionFilter)
+        $result = [NaviPartner.ALTestRunner.HttpZipStream.HttpZipClient]::ExtractFileAsync($Uri, $DestinationPath, $ExtractionFilter)
+        do {
+            Start-Sleep -Milliseconds 250
+            $result
+        } while (!$result.IsCompleted)
+
+        if ($result.IsFaulted) {
+            throw $result.Exception
+        }
     } catch {
         Invoke-PowerShellException -ErrorRec $_
     } finally {

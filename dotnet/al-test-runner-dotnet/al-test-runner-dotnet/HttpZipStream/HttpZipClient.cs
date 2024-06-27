@@ -1,13 +1,20 @@
 ﻿using NaviPartner.ALTestRunner.HttpZipStream;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace NaviPartner.ALTestRunner.HttpZipStream
 {
     public static class HttpZipClient
     {
-        public static async void ExtractFile(string remoteArchive, string outputDirectory, string extractionPattern)
+        public static void ExtractFile(string remoteArchive, string outputDirectory, string extractionPattern)
         {
+
+        }
+        public static async Task<bool> ExtractFileAsync(string remoteArchive, string outputDirectory, string extractionPattern)
+        {
+            var tasks = new List<Task>();
+
             if (!Directory.Exists(outputDirectory))
             {
                 Directory.CreateDirectory(outputDirectory);
@@ -19,7 +26,6 @@ namespace NaviPartner.ALTestRunner.HttpZipStream
                 var searchRegex = new Regex(extractionPattern);
                 var filteredEntries = entryList.FindAll(e => (searchRegex.IsMatch(e.FileName)));
 
-                var tasks = new List<Task>();
                 foreach (var entry in filteredEntries)
                 {
                     tasks.Add(zipStream.ExtractAsync(entry, (entryStream) =>
@@ -31,9 +37,11 @@ namespace NaviPartner.ALTestRunner.HttpZipStream
                         }
                     }));
                 }
-
-                await Task.WhenAll(tasks);
             }
+
+            await Task.WhenAll(tasks);
+
+            return true;
         }
     }
 }
