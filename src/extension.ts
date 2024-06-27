@@ -137,7 +137,14 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(alTestController);
 	discoverTests();
 
-	checkMissingButConfiguredClientSessionLibsAndDownload();
+	checkMissingButConfiguredClientSessionLibsAndDownload().catch((error) => {
+		vscode.window.showInformationMessage('Please reload the window to activate the extension.', 'Reload')
+        .then(selection => {
+            if (selection === 'Reload') {
+                vscode.commands.executeCommand('workbench.action.reloadWindow');
+            }
+        });
+	});
 }
 
 export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {
@@ -743,7 +750,7 @@ function checkDotNetVersion(): Promise<string> {
 
 function checkAllExternalPrerequisites() {
 	
-	const requiredPSVersion = '10.0.0';
+	const requiredPSVersion = '7.0.0';
     const requiredDotNetVersion = '5.0.0';
 
 	Promise.all([checkPowerShellVersion(), checkDotNetVersion()])
