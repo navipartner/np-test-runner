@@ -73,7 +73,6 @@ export let telemetryReporter: TelemetryReporter;
 export function activate(context: vscode.ExtensionContext) {
 	console.log('navipartner.np-al-test-runner extension is activated');
 
-	getALTestRunnerConfig();
 	checkAllExternalPrerequisites();
 
 	let codelensProvider = new CodelensProvider();
@@ -138,6 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(alTestController);
 	discoverTests();
 
+	invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
 	checkMissingButConfiguredClientSessionLibsAndDownload().catch((error) => {
 		vscode.window.showInformationMessage('Please reload the window to activate the extension.', 'Reload')
         .then(selection => {
