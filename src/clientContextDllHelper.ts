@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as types from './types';
 import * as path from 'path';
 import * as fetch from 'node-fetch'; 
-import { invokePowerShellCmd, getSmbAlExtensionPath, getExtension } from './extension';
+import { invokePowerShellCmd, getDocumentWorkspaceFolder, getExtension } from './extension';
 import { DOMParser } from 'xmldom';
 import { InvocationResult } from 'node-powershell';
 import * as fs from 'fs';
@@ -239,8 +239,9 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 	}
 
 	if (selectedVersion) {
+		let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
 		const versionOnly = selectedVersion.split('/')[0];	
-		let command = `Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
+		let command = `Set-Location '${activeDocumentRootFolderPath}'; Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
 
 		const bcv = await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
@@ -248,7 +249,7 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 			cancellable: true
 		}, async (progress, token) => {
 			progress.report({ message: "Working" });
-				
+			
 			const bcv = await invokePowerShellCmd(command).then((result) => {
 				return result;
 			}).catch((error) => {

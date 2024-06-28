@@ -137,16 +137,6 @@ export function activate(context: vscode.ExtensionContext) {
 	alTestController = createTestController();
 	context.subscriptions.push(alTestController);
 	discoverTests();
-
-	invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
-	checkMissingButConfiguredClientSessionLibsAndDownload().catch((error) => {
-		vscode.window.showInformationMessage('Please reload the window to activate the extension.', 'Reload')
-        .then(selection => {
-            if (selection === 'Reload') {
-                vscode.commands.executeCommand('workbench.action.reloadWindow');
-            }
-        });
-	});
 }
 
 export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {
@@ -155,6 +145,8 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 		const config = getCurrentWorkspaceConfig();
 		getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
 		let publishType: types.PublishType = types.PublishType.None;
+
+		await checkMissingButConfiguredClientSessionLibsAndDownload();
 
 		if (!config.automaticPublishing) {
 			switch (config.publishBeforeTest) {
@@ -256,7 +248,7 @@ export async function attachDebugger() {
 	await vscode.debug.startDebugging(vscode.workspace.workspaceFolders![0], attachConfig);
 }
 
-function getDocumentWorkspaceFolder(): string | undefined {
+export function getDocumentWorkspaceFolder(): string | undefined {
 	const fileName = vscode.window.activeTextEditor?.document.fileName;
 	return vscode.workspace.workspaceFolders
 		?.map((folder) => folder.uri.fsPath)
