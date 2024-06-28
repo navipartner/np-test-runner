@@ -1,11 +1,11 @@
 function Get-ALTestRunnerConfigPath {    
-    $ConfigPath = Find-ALTestRunnerConfigInFolder (Get-Location)
+    $ConfigPath = Find-ALTestRunnerConfigInFolder ($PSScriptRoot)
     if ($null -eq $ConfigPath) {
-        $ConfigPath = Find-ALTestRunnerConfigInFolder (Split-Path (Get-Location) -Parent)
+        $ConfigPath = Find-ALTestRunnerConfigInFolder (Split-Path ($PSScriptRoot) -Parent)
     }
 
     if ($null -eq $ConfigPath) {
-        $ConfigPath = Join-Path (Join-Path (Get-Location) '.npaltestrunner') 'config.json'
+        $ConfigPath = Join-Path (Join-Path ($PSScriptRoot) '.npaltestrunner') 'config.json'
     }
 
     return $ConfigPath
@@ -18,7 +18,7 @@ function Find-ALTestRunnerConfigInFolder {
     )
 
     if ((Get-ChildItem $Folder -Recurse -Filter '.npaltestrunner').Count -gt 1) {
-        throw "There is more than one .npaltestrunner folder under $(Get-Location)"
+        throw "There is more than one .npaltestrunner folder under $($PSScriptRoot)"
     }
 
     Get-ChildItem $Folder -Recurse -Filter '.npaltestrunner' | ForEach-Object {
