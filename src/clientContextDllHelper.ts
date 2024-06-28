@@ -239,7 +239,7 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 	}
 
 	if (selectedVersion) {
-		let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
+		let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
 		const versionOnly = selectedVersion.split('/')[0];	
 		let command = `Set-Location '${activeDocumentRootFolderPath}'; Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
 

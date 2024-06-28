@@ -23,6 +23,7 @@ import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
 import * as path from 'path';
 import { exec } from 'child_process';
 import * as semver from 'semver';
+import { error } from 'console';
 
 let terminal: vscode.Terminal;
 let debugChannel: vscode.OutputChannel;
@@ -37,6 +38,7 @@ const failingTestColor = 'rgba(' + config.failingTestsColor.red + ',' + config.f
 const untestedTestColor = 'rgba(' + config.untestedTestsColor.red + ',' + config.untestedTestsColor.green + ',' + config.untestedTestsColor.blue + ',' + config.untestedTestsColor.alpha + ')';
 export const outputWriter: OutputWriter = getOutputWriter(vscode.workspace.getConfiguration('np-al-test-runner').testOutputLocation);
 export const channelWriter: OutputWriter = getOutputWriter(types.OutputType.Channel);
+let testRunnerProjectRootPath = null;
 
 const testFolderPath = getTestFolderPath();
 if (testFolderPath) {
@@ -248,11 +250,53 @@ export async function attachDebugger() {
 	await vscode.debug.startDebugging(vscode.workspace.workspaceFolders![0], attachConfig);
 }
 
-export function getDocumentWorkspaceFolder(): string | undefined {
-	const fileName = vscode.window.activeTextEditor?.document.fileName;
-	return vscode.workspace.workspaceFolders
-		?.map((folder) => folder.uri.fsPath)
-		.filter((fsPath) => fileName?.startsWith(fsPath))[0];
+export async function getDocumentWorkspaceFolder(): Promise<string | undefined> {
+	if (testRunnerProjectRootPath !== null) {
+		return testRunnerProjectRootPath;
+	}
+	
+	let rootPath: string | undefined;
+
+	const workspaceFolders = vscode.workspace.workspaceFolders;
+	const activeEditor = vscode.window.activeTextEditor;
+	let activeFolder: vscode.WorkspaceFolder | undefined;
+
+	if (activeEditor) {
+		const activeDocumentUri = activeEditor.document.uri;
+		activeFolder = vscode.workspace.getWorkspaceFolder(activeDocumentUri);
+		if (activeFolder) {
+			rootPath = activeFolder.uri.fsPath;
+		}
+	}
+
+	if (!rootPath) {
+		// Fall back to the first workspace folder if no active editor or workspace folder found
+		if ((workspaceFolders) && (workspaceFolders.length == 1))	{
+			rootPath = workspaceFolders[0].uri.fsPath;
+		}
+	}
+
+	if (!rootPath) {
+		const folderOptions = workspaceFolders.map(folder => ({
+            label: folder.name,
+            description: folder.uri.fsPath,
+            folder: folder
+        }));
+
+        await vscode.window.showQuickPick(folderOptions, {
+            placeHolder: 'Select the workspace folder to configure test runner for.',
+            canPickMany: false
+        }).then((selected) => {
+				rootPath = selected.folder.uri.fsPath;
+		});
+	}
+
+	if (rootPath) {
+		testRunnerProjectRootPath = rootPath;
+		return testRunnerProjectRootPath;
+	} else {
+		error("No project was selected!");
+	}
 }
 
 export async function invokePowerShellCmd(command: string) : Promise<any> {
@@ -305,7 +349,7 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 				vscode.window.showErrorMessage(error);
 			});
 			
-			let activeDocumentRootFolderPath = getDocumentWorkspaceFolder();
+			let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
 			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).then((result) => {
 				console.log(result);
 			}).catch((error) => {
