@@ -26,6 +26,7 @@ import * as semver from 'semver';
 
 let terminal: vscode.Terminal;
 let debugChannel: vscode.OutputChannel;
+let debugChannelActivated: boolean = false;
 var powershellSession = null;
 var powershellSessionReady = false;
 export let activeEditor = vscode.window.activeTextEditor;
@@ -364,8 +365,9 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		}
 
 		try {
-			if (debugChannel) {
+			if ((debugChannel) && (!debugChannelActivated)) {
 				debugChannel.show(false);
+				debugChannelActivated = true;
 			}
 		} catch(e) {
 			console.log(`Can't open PowerShell invocation error channel: ${e}`);
