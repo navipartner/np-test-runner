@@ -343,7 +343,8 @@
 						"type": "boolean",
 						"scope": "resource",
 						"description": "Automatically publish apps to the container when compiling",
-						"default": false
+						"default": false,
+						"enablement": "false"
 					},
 					"np-al-test-runner.sendDebugTelemetry": {
 						"type": "boolean",
