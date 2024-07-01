@@ -18,7 +18,7 @@ import { CodeCoverageCodeLensProvider } from './codeCoverageCodeLensProvider';
 import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
-import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError } from 'node-powershell';
+import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError, InvocationResult } from 'node-powershell';
 import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
 import * as path from 'path';
 import { exec } from 'child_process';
@@ -180,27 +180,31 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 			unlinkSync(getLastResultPath());
 		}
 
-		vscode.window.withProgress({
+		await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
 			title: `Running tests`,
 			cancellable: true
 		}, async (progress, token) => {
 			progress.report({ message: "Working ..." });
 			
-			await invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
-			await invokePowerShellCmd(config.preTestCommand);
-			await invokePowerShellCmd(command).then((result) => {
+			try {
+				await invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
+				await invokePowerShellCmd(config.preTestCommand);
+				await invokePowerShellCmd(command).then((result) => {
 
-			}).catch((error) => {
-				vscode.window.showErrorMessage(`Test execution failed`, error);
-			});
-	
-			return new Promise<void>((resolve) => {
-				resolve();
-			});
+				}).catch((error) => {
+					vscode.window.showErrorMessage(`Test execution failed`, error);
+				});
+
+				await invokePowerShellCmd(config.postTestCommand);
+		
+				return new Promise<void>((resolve) => {
+					resolve();
+				});
+			} catch (e) {
+				throw e;
+			}
 		});
-
-		await invokePowerShellCmd(config.postTestCommand);
 
 		awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
 			if (resultsAvailable) {
@@ -308,53 +312,34 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 	}
 
 	if (powershellSession === null) {
-		try {
-			let powershellOptions : PowerShellOptions = {
-				executable: PSExecutableType.PowerShellCore,
-				throwOnInvocationError: true,
-				executableOptions: {
-					'-NoLogo': true,
-					'-NoExit': true,
-					"-NonInteractive": true
-				}
+		let powershellOptions : PowerShellOptions = {
+			executable: PSExecutableType.PowerShellCore,
+			throwOnInvocationError: true,
+			executableOptions: {
+				'-NoLogo': true,
+				'-NoExit': true,
+				"-NonInteractive": true
 			}
+		}
 
-			powershellSession = new PowerShell(powershellOptions);
+		powershellSession = new PowerShell(powershellOptions);
 
-			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`).then((result => {
-				console.log(result);
-			})).catch((error) => {
-				console.log(error);
-				vscode.window.showErrorMessage(error);
-			});
+		try { 
+			
+			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`);
 
 			let alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
-			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`).then((result) => {
-				console.log(result);
-			}).catch((error) => {
-				vscode.window.showErrorMessage(error);
-			});
+			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`);
 
 			let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
-			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`).then((result) => {
-				console.log(result);
-			}).catch((error) => {
-				vscode.window.showErrorMessage(error);
-			});
+			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`);
 
 			let npClientContextDotNetPath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'ClientContextDotNet', 'ClientContextDotNet.psm1');
-			await powershellSession.invoke(`Import-Module ${npClientContextDotNetPath}`).then((result) => {
-				console.log(result);
-			}).catch((error) => {
-				vscode.window.showErrorMessage(error);
-			});
-			
+			await powershellSession.invoke(`Import-Module ${npClientContextDotNetPath}`);
+		
 			let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
-			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`).then((result) => {
-				console.log(result);
-			}).catch((error) => {
-				vscode.window.showErrorMessage(error);
-			});
+			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`);
+
 		} catch(e) {
 			if (powershellSession) {
 				await powershellSession.dispose();
@@ -364,11 +349,11 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		}
 	}
 
-	console.log(command);
-	await powershellSession.invoke(command).then((result) => {
-		console.log(result);
+	try {
+		console.log(command);
+		let result = await powershellSession.invoke(command);
 		return result;
-	}).catch((error) => {
+	} catch(error) {
 		let errorMsg = null;
 		let errorStack = null;
 		let errorException = null;
@@ -414,7 +399,7 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		} else {
 			throw error;
 		}
-	});
+	}
 }
 
 function extractPowerShellError(extractionString: string) : string {
