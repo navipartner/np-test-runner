@@ -225,10 +225,7 @@ function Get-DevServiceUrl {
                 $serviceUrl = "$serviceUrl`:$port"
             }
             $serviceUrl = "$serviceUrl/$serverInstance"
-            if (-not ([string]::IsNullOrEmpty($tenant))) {
-                $serviceUrl = "$serviceUrl/?tenant=$tenant"
-            }
-
+            
             return $serviceUrl
         }
         Sandbox {
@@ -241,9 +238,8 @@ function Get-DevServiceUrl {
             $response = Invoke-RestMethod -Method Get -Uri $serviceUrl
 
             $useUrl = $response.data.Split('?')[0]
-            $tenant = ($response.data.Split('?')[1]).Split('=')[1]
             $publicWebBaseUrl = $useUrl.TrimEnd('/')
-            $serviceUrl = "$publicWebBaseUrl/cs?tenant=$tenant"
+            $serviceUrl = "$publicWebBaseUrl/cs"
 
             return $serviceUrl
         }
@@ -727,6 +723,80 @@ function Invoke-PowerShellException {
     throw "PowerShell integration module exception in expected format: {{pwshexception}}{{$($ErrorRec.Exception.Message)}}{{$($ErrorRec.ScriptStackTrace)}}{{$($ErrorRec.Exception)}}"
 }
 
+function Publish-App {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$AppFile,
+        [Parameter(Mandatory=$false)]
+        [string]$SmbAlExtPath
+    )
+
+    $Params = @{}
+    $environmentType = Get-ValueFromLaunchJson -KeyName 'environmentType'
+    $tenant = Get-ValueFromLaunchJson -KeyName 'tenant'
+    $serviceUrl = Get-DevServiceUrl
+
+    $Params.Add('AppFile', $AppFile)
+    $Params.Add('Scope', 'tenant')
+    $Params.Add('Tenant', $tenant)
+    $Params.Add('DevServerUrl', $serviceUrl)
+
+    Test-ServiceIsRunningAndHealthy
+
+    switch ($environmentType) {
+        OnPrem {
+            $serviceUrlCredCacheKey = Get-ServiceUrlCredentialCacheKey
+            $serviceUrlCredCacheKey = $serviceUrlCredCacheKey.ToLower();
+
+            $creds = Get-NavUserPasswordCredentials -SmbAlExtPath $SmbAlExtPath -WebClientUrl $serviceUrlCredCacheKey
+            if (!$creds) {
+                throw "Can't find credential for the key $serviceUrlCredCacheKey!"
+            }
+
+            [securestring]$secStringPassword = ConvertTo-SecureString $creds.Password -AsPlainText -Force
+            [pscredential]$creds = New-Object System.Management.Automation.PSCredential ($creds.Username, $secStringPassword)
+            if (!$creds) {
+                throw "Can't find credentials in the AL development credential cache for $serviceUrlCredCacheKey!"
+            }
+            $Params.Add('Credential', $creds)
+        }
+        Sandbox {
+            # Sandbox with AAD auth.
+            $environmentName = Get-ValueFromLaunchJson -KeyName 'environmentName'
+            if (!$bcAuthContext) {
+                $bcAuthContext = New-BcAuthContext -includeDeviceLogin
+            }
+            $bcAuthContext = Renew-BcAuthContext $bcAuthContext
+            $Global:BCAuthContext = $bcAuthContext
+            
+            if (!$bcAuthContext) {
+                $bcAuthContext = New-BcAuthContext -includeDeviceLogin
+            }
+            $bcAuthContext = Renew-BcAuthContext $bcAuthContext
+            
+            $response = Invoke-RestMethod -Method Get -Uri "https://businesscentral.dynamics.com/$($bcAuthContext.tenantID)/$environmentName/deployment/url"
+            if($response.status -ne 'Ready') {
+                throw "environment not ready, status is $($response.status)"
+            }
+            $useUrl = $response.data.Split('?')[0]
+            $tenant = ($response.data.Split('?')[1]).Split('=')[1]
+            $publicWebBaseUrl = $useUrl.TrimEnd('/')
+            $serviceUrl = "$publicWebBaseUrl/cs?tenant=$tenant"
+            if ($companyName) {
+                $serviceUrl += "&company=$([Uri]::EscapeDataString($companyName))"
+            }
+
+            $Params.Add('BcAuthContext', $bcAuthContext)
+        }
+        Default {
+            throw "Environment type '$environmentType' is not supported!"
+        }
+    }
+
+    Publish-NAVAppViaDevEndpoint @Params
+}
+
 ##########################
 # From BcContainerHelper #
 ##########################
@@ -807,21 +877,17 @@ function Publish-NAVAppViaDevEndpoint {
             Write-Host "Disabling SSL Verification on HttpClient"
             [SslVerification]::DisableSsl($handler)
         }
-        if ($customConfig.ClientServicesCredentialType -eq "Windows") {
-            $handler.UseDefaultCredentials = $true
-        }
-        $HttpClient = [System.Net.Http.HttpClient]::new($handler)
-        if ($customConfig.ClientServicesCredentialType -eq "NavUserPassword") {
-            if (!($credential)) {
-                throw "You need to specify credentials when you are not using Windows Authentication"
-            }
+        if ($Credential) {
+            $HttpClient = [System.Net.Http.HttpClient]::new($handler)
             $pair = ("$($Credential.UserName):"+[System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($credential.Password)))
             $bytes = [System.Text.Encoding]::ASCII.GetBytes($pair)
             $base64 = [System.Convert]::ToBase64String($bytes)
             $HttpClient.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue("Basic", $base64);
+            $HttpClient.Timeout = [System.Threading.Timeout]::InfiniteTimeSpan
+            $HttpClient.DefaultRequestHeaders.ExpectContinue = $false        
+        } else {
+            $handler.UseDefaultCredentials = $true
         }
-        $HttpClient.Timeout = [System.Threading.Timeout]::InfiniteTimeSpan
-        $HttpClient.DefaultRequestHeaders.ExpectContinue = $false        
     }
     
     $schemaUpdateMode = "synchronize"
@@ -832,9 +898,9 @@ function Publish-NAVAppViaDevEndpoint {
         $schemaUpdateMode = "forcesync"
     }
     $url = "$devServerUrl/dev/apps?SchemaUpdateMode=$schemaUpdateMode"
-    if ($PSBoundParameters.ContainsKey('dependencyPublishingOption')) {
-        $url += "&DependencyPublishingOption=$dependencyPublishingOption"
-    }
+    #if ($PSBoundParameters.ContainsKey('dependencyPublishingOption')) {
+    #    $url += "&DependencyPublishingOption=$dependencyPublishingOption"
+    #}
     if ($tenant) {
         $url += "&tenant=$tenant"
     }

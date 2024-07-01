@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { activeEditorIsOpenToTestAppJson, openEditorToTestFileIfNotAlready } from './alFileHelper';
 import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getLaunchConfiguration } from './config';
 import { failedToPublishMessage } from './constants';
-import { getALTestRunnerTerminal } from './extension';
+import { getALTestRunnerTerminal, invokePowerShellCmd, getDocumentWorkspaceFolder, getSmbAlExtensionPath } from './extension';
 import { awaitFileExistence } from './file';
 import { sendDebugEvent, sendFailedToPublishError, sendNoTestFolderNameError } from './telemetry';
 import { PublishResult, PublishType } from "./types";
@@ -73,25 +73,25 @@ export function publishApp(publishType: PublishType): Promise<PublishResult> {
 }
 
 export async function publishAppFile(uri: vscode.Uri): Promise<PublishResult> {
-    return new Promise(async resolve => {
-        shouldPublishApp = false;
-        const terminal = getALTestRunnerTerminal(getTerminalName());
-        terminal.show(true);
-        terminal.sendText(' ');
-        terminal.sendText(`Publish-App -AppFile "${uri.fsPath}" -CompletionPath "${getPublishCompletionPath()}" -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
-
-        const resultExists = await awaitFileExistence(getPublishCompletionPath(), getCurrentWorkspaceConfig().publishTimeout);
-        if (resultExists) {
-            const content = readFileSync(getPublishCompletionPath(), { encoding: 'utf-8' })
-            const success = content.trim() === '1';
-            let message = '';
-            if (!success) {
-                message = content.trim();
-            }
-            resolve({ success: success, message: message });
-        }
-        else {
-            resolve({ success: false, message: failedToPublishMessage });
+    return await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Publishing changs`,
+        cancellable: true
+    }, async (progress, token) => {
+        progress.report({ message: "" });
+        
+        try {
+            return new Promise(async resolve => {
+                shouldPublishApp = false;
+                let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
+                let smbAlExtPath = getSmbAlExtensionPath();
+                await invokePowerShellCmd(`Set-Location ${activeDocumentRootFolderPath}`);
+                await invokePowerShellCmd(`Publish-App -AppFile "${uri.fsPath}" -smbAlExtPath "${smbAlExtPath}" `);        
+        
+                resolve({ success: true, message: '' });
+            });
+        } catch (e) {
+            throw e;
         }
     });
 }
