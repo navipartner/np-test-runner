@@ -37,11 +37,26 @@ export function createTestController(controllerId: string = 'alTestController'):
 }
 
 export async function discoverTests() {
-    numberOfTests = 0;
-    const alFiles = await getALFilesInWorkspace();
-    alFiles.forEach(async alFile => {
-        const document = await vscode.workspace.openTextDocument(alFile.path);
-        discoverTestsInDocument(document);
+    return await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Discovering the tests`,
+        cancellable: true
+    }, async (progress, token) => {        
+        try {
+            progress.report({ message: "Reading files ..." });
+            numberOfTests = 0;
+            const alFiles = await getALFilesInWorkspace();
+            const thenables = alFiles.map(alFile => 
+                vscode.workspace.openTextDocument(alFile.path).then(document => {
+                    discoverTestsInDocument(document);
+                })
+            );
+
+            progress.report({ message: "Processing files ..." });
+            return await Promise.all(thenables);
+        } catch (e) {
+            throw e;
+        }
     });
 }
 
@@ -50,30 +65,32 @@ export async function discoverTestsInFileName(fileName: string) {
     discoverTestsInDocument(document);
 }
 
-export async function discoverTestsInDocument(document: vscode.TextDocument) {
+export async function discoverTestsInDocument(document: vscode.TextDocument, alFile?: ALFile) {
     if (documentIsTestCodeunit(document)) {
-        const alFiles = await getALFilesInWorkspace('', `**/${path.basename(document.uri.fsPath)}`);
-        let alFile;
-        if (alFiles) {
-            alFile = alFiles.shift();
-            let codeunitItem = await getTestItemFromFileNameAndSelection(document.uri.fsPath, 0);
-            if (codeunitItem === undefined) {
-                codeunitItem = alTestController.createTestItem(alFile!.object!.name!, alFile!.object!.name!, document.uri);
+        if (!alFile) {
+            const alFiles = await getALFilesInWorkspace('', `**/${path.basename(document.uri.fsPath)}`);
+            if (alFiles) {
+                alFile = alFiles.shift();
             }
-
-            codeunitItem.children.forEach(test => {
-                codeunitItem!.children.delete(test.id);
-                numberOfTests -= 1;
-            });
-
-            getTestMethodRangesFromDocument(document).forEach(testRange => {
-                const testItem = alTestController.createTestItem(testRange.name, testRange.name, document.uri);
-                testItem.range = testRange.range;
-                codeunitItem!.children.add(testItem);
-                numberOfTests += 1;
-            });
-            alTestController.items.add(codeunitItem);
         }
+        
+        let codeunitItem = await getTestItemFromFileNameAndSelection(document.uri.fsPath, 0);
+        if (codeunitItem === undefined) {
+            codeunitItem = alTestController.createTestItem(alFile!.object!.name!, alFile!.object!.name!, document.uri);
+        }
+
+        codeunitItem.children.forEach(test => {
+            codeunitItem!.children.delete(test.id);
+            numberOfTests -= 1;
+        });
+
+        getTestMethodRangesFromDocument(document).forEach(testRange => {
+            const testItem = alTestController.createTestItem(testRange.name, testRange.name, document.uri);
+            testItem.range = testRange.range;
+            codeunitItem!.children.add(testItem);
+            numberOfTests += 1;
+        });
+        alTestController.items.add(codeunitItem);
     }
 }
 
