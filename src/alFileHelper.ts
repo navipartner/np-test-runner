@@ -287,7 +287,7 @@ export function getTestMethodRangesFromDocument(document: vscode.TextDocument): 
 		}
 
 		let methodMatch = subDocumentText.match('(?<=procedure ).*\\(');
-		if (methodMatch !== undefined) {
+		if ((methodMatch != null) && (match != null)) {
 			const startPos = document.positionAt(match.index + methodMatch!.index!);
 			const endPos = document.positionAt(match.index + methodMatch!.index! + methodMatch![0].length - 1);
 
