@@ -205,6 +205,54 @@ function Get-ServiceUrl {
     }
 }
 
+function Get-DevServiceUrl {
+    [CmdletBinding()]
+    param (
+    )
+    
+    $environmentType = Get-ValueFromLaunchJson -KeyName 'environmentType'
+    
+    switch ($environmentType) {
+        OnPrem {
+            # TODO: Optimize => Read once and then parse each property.
+            $server = Get-ValueFromLaunchJson -KeyName 'server'
+            $serverInstance = Get-ValueFromLaunchJson -KeyName 'serverInstance'
+            $port = Get-ValueFromLaunchJson -KeyName 'port'
+            $tenant = Get-ValueFromLaunchJson -KeyName 'tenant'
+
+            $serviceUrl = "$($server.TrimEnd('/'))"
+            if (-not ([string]::IsNullOrEmpty($port))) {
+                $serviceUrl = "$serviceUrl`:$port"
+            }
+            $serviceUrl = "$serviceUrl/$serverInstance"
+            if (-not ([string]::IsNullOrEmpty($tenant))) {
+                $serviceUrl = "$serviceUrl/?tenant=$tenant"
+            }
+
+            return $serviceUrl
+        }
+        Sandbox {
+            # TODO: Base URL for SaaS maybe configurable?
+            $serviceUrl = 'https://businesscentral.dynamics.com/'
+            $environmentName = Get-ValueFromLaunchJson -KeyName 'environmentName'
+            $tenant = Get-ValueFromLaunchJson -KeyName 'tenant'
+
+            $serviceUrl = "$($serviceUrl.TrimEnd('/'))/$tenant/$environmentName/deployment/url"
+            $response = Invoke-RestMethod -Method Get -Uri $serviceUrl
+
+            $useUrl = $response.data.Split('?')[0]
+            $tenant = ($response.data.Split('?')[1]).Split('=')[1]
+            $publicWebBaseUrl = $useUrl.TrimEnd('/')
+            $serviceUrl = "$publicWebBaseUrl/cs?tenant=$tenant"
+
+            return $serviceUrl
+        }
+        Default {
+            throw "Environment type '$environmentType' is not supported!"
+        }
+    }
+}
+
 function Get-ServiceUrlCredentialCacheKey {
     [CmdletBinding()]
     param (
@@ -708,6 +756,125 @@ function Test-BcAuthContext {
           ($bcAuthContext.ContainsKey('deviceLoginTimeout')))) {
         throw 'BcAuthContext should be a HashTable created by New-BcAuthContext.'
     }
+}
+
+### COPIED FROM 'Publish-NavContainerApp':
+function Publish-NAVAppViaDevEndpoint {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$AppFile,
+        [Parameter(Mandatory=$true)]
+        [string]$DevServerUrl,
+        [ValidateSet('Global','Tenant')]
+        [string]$Scope = 'Tenant',
+        [string]$Tenant,
+        [pscredential]$Credential,
+        [Hashtable]$BcAuthContext,
+        [string]$Environment
+    )
+           
+    if ($scope -eq "Global") {
+        throw "You cannot publish to global scope using the dev. endpoint"
+    }
+
+    $sslVerificationDisabled = $false
+    if ($bcAuthContext -and $environment) {
+        $bcAuthContext = Renew-BcAuthContext -bcAuthContext $bcAuthContext
+        $isCloudBcContainer = isCloudBcContainer -authContext $bcAuthContext -containerId $environment
+        if ($isCloudBcContainer) {
+
+            throw "TODO"
+        }
+        else {
+            $handler = New-Object System.Net.Http.HttpClientHandler
+            $HttpClient = [System.Net.Http.HttpClient]::new($handler)
+            $HttpClient.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", $bcAuthContext.AccessToken)
+            $HttpClient.Timeout = [System.Threading.Timeout]::InfiniteTimeSpan
+            $HttpClient.DefaultRequestHeaders.ExpectContinue = $false
+        }
+    }
+    else {
+        $handler = New-Object System.Net.Http.HttpClientHandler
+        if ($customConfig.DeveloperServicesSSLEnabled -eq "true") {
+            $protocol = "https://"
+        }
+        else {
+            $protocol = "http://"
+        }
+        $sslVerificationDisabled = ($protocol -eq "https://")
+        if ($sslVerificationDisabled) {
+            Write-Host "Disabling SSL Verification on HttpClient"
+            [SslVerification]::DisableSsl($handler)
+        }
+        if ($customConfig.ClientServicesCredentialType -eq "Windows") {
+            $handler.UseDefaultCredentials = $true
+        }
+        $HttpClient = [System.Net.Http.HttpClient]::new($handler)
+        if ($customConfig.ClientServicesCredentialType -eq "NavUserPassword") {
+            if (!($credential)) {
+                throw "You need to specify credentials when you are not using Windows Authentication"
+            }
+            $pair = ("$($Credential.UserName):"+[System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($credential.Password)))
+            $bytes = [System.Text.Encoding]::ASCII.GetBytes($pair)
+            $base64 = [System.Convert]::ToBase64String($bytes)
+            $HttpClient.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue("Basic", $base64);
+        }
+        $HttpClient.Timeout = [System.Threading.Timeout]::InfiniteTimeSpan
+        $HttpClient.DefaultRequestHeaders.ExpectContinue = $false        
+    }
+    
+    $schemaUpdateMode = "synchronize"
+    if ($syncMode -eq "Clean") {
+        $schemaUpdateMode = "recreate";
+    }
+    elseif ($syncMode -eq "ForceSync") {
+        $schemaUpdateMode = "forcesync"
+    }
+    $url = "$devServerUrl/dev/apps?SchemaUpdateMode=$schemaUpdateMode"
+    if ($PSBoundParameters.ContainsKey('dependencyPublishingOption')) {
+        $url += "&DependencyPublishingOption=$dependencyPublishingOption"
+    }
+    if ($tenant) {
+        $url += "&tenant=$tenant"
+    }
+    
+    $appName = [System.IO.Path]::GetFileName($appFile)
+    
+    $multipartContent = [System.Net.Http.MultipartFormDataContent]::new()
+    $FileStream = [System.IO.FileStream]::new($appFile, [System.IO.FileMode]::Open)
+    try {
+        $fileHeader = [System.Net.Http.Headers.ContentDispositionHeaderValue]::new("form-data")
+        $fileHeader.Name = "$AppName"
+        $fileHeader.FileName = "$appName"
+        $fileHeader.FileNameStar = "$appName"
+        $fileContent = [System.Net.Http.StreamContent]::new($FileStream)
+        $fileContent.Headers.ContentDisposition = $fileHeader
+        $multipartContent.Add($fileContent)
+        Write-Host "Publishing $appName to $url"
+        $result = $HttpClient.PostAsync($url, $multipartContent).GetAwaiter().GetResult()
+        if (!$result.IsSuccessStatusCode) {
+            $message = "Status Code $($result.StatusCode) : $($result.ReasonPhrase)"
+            try {
+                $resultMsg = $result.Content.ReadAsStringAsync().Result
+                try {
+                    $json = $resultMsg | ConvertFrom-Json
+                    $message += "`n$($json.Message)"
+                }
+                catch {
+                    $message += "`n$resultMsg"
+                }
+            }
+            catch {}
+            throw $message
+        }
+    }
+    catch {
+        Invoke-PowerShellException -ErrorRec $_
+    }
+    finally {
+        $FileStream.Close()
+    }    
 }
 
 Export-ModuleMember -Function *
