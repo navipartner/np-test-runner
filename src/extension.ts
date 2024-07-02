@@ -138,7 +138,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	alTestController = createTestController();
 	context.subscriptions.push(alTestController);
-	discoverTests();
+
+    vscode.workspace.onDidOpenTextDocument(event => { discoverTestsInDocument(event) });
+
+    // Optionally, you can also handle already opened documents
+    //vscode.workspace.textDocuments.forEach(discoverTestsInDocument);
 }
 
 export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {

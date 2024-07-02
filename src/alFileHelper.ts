@@ -28,7 +28,8 @@ export function getALObjectOfDocument(document: vscode.TextDocument): ALObject |
 }
 
 export function documentIsTestCodeunit(document: vscode.TextDocument): boolean {
-	if (document.fileName.substring(document.fileName.lastIndexOf('.')) !== '.al') {
+	const allowedExtensions = ['.al', '.al.git'];
+    if (!allowedExtensions.some(ext => document.fileName.endsWith(ext))) {
 		return false;
 	}
 

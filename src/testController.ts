@@ -66,6 +66,13 @@ export async function discoverTestsInFileName(fileName: string) {
 }
 
 export async function discoverTestsInDocument(document: vscode.TextDocument, alFile?: ALFile) {
+    // Check the scheme of the document's URI
+    let filePathUri = document.uri;
+    if (document.uri.scheme === 'git') {
+        filePathUri = getFileUriFromGitUri(filePathUri);
+        document = await vscode.workspace.openTextDocument(filePathUri);
+    }
+
     if (documentIsTestCodeunit(document)) {
         if (!alFile) {
             const alFiles = await getALFilesInWorkspace('', `**/${path.basename(document.uri.fsPath)}`);
@@ -92,6 +99,12 @@ export async function discoverTestsInDocument(document: vscode.TextDocument, alF
         });
         alTestController.items.add(codeunitItem);
     }
+}
+
+function getFileUriFromGitUri(gitUri: vscode.Uri): vscode.Uri | null {
+    let filePath = gitUri.path;
+    filePath = gitUri.fsPath.substring(0, gitUri.fsPath.lastIndexOf('.git'));
+    return vscode.Uri.file(filePath);
 }
 
 export async function runTestHandler(request: vscode.TestRunRequest) {
@@ -355,41 +368,45 @@ function getResultForTestItem(results: ALTestAssembly[], testItem: vscode.TestIt
 }
 
 export async function getTestItemFromFileNameAndSelection(filename?: string, selectionStart?: number): Promise<vscode.TestItem | undefined> {
-    return new Promise(async resolve => {
-        if (filename === undefined) {
-            filename = vscode.window.activeTextEditor!.document.fileName;
-        }
-
-        if (selectionStart === undefined) {
-            selectionStart = vscode.window.activeTextEditor!.selection.start.line;
-        }
-
-        const document = await vscode.workspace.openTextDocument(filename);
-        const object = getALObjectOfDocument(document);
-
-        if (object) {
-            const codeunitItem = alTestController.items.get(object!.name!);
-
-            if (selectionStart === 0) {
-                resolve(codeunitItem);
-                return;
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (filename === undefined) {
+                filename = vscode.window.activeTextEditor!.document.fileName;
             }
 
-            let testMethodRanges = getTestMethodRangesFromDocument(document);
-            testMethodRanges = testMethodRanges.filter(range => {
-                if (range.range.start.line <= selectionStart!) {
-                    return true;
+            if (selectionStart === undefined) {
+                selectionStart = vscode.window.activeTextEditor!.selection.start.line;
+            }
+
+            const document = await vscode.workspace.openTextDocument(filename);
+            const object = getALObjectOfDocument(document);
+
+            if (object) {
+                const codeunitItem = alTestController.items.get(object!.name!);
+
+                if (selectionStart === 0) {
+                    resolve(codeunitItem);
+                    return;
                 }
-            });
 
-            if (testMethodRanges.length > 0) {
-                const testMethod = testMethodRanges.pop();
-                const testItem = codeunitItem!.children.get(testMethod!.name);
-                resolve(testItem);
+                let testMethodRanges = getTestMethodRangesFromDocument(document);
+                testMethodRanges = testMethodRanges.filter(range => {
+                    if (range.range.start.line <= selectionStart!) {
+                        return true;
+                    }
+                });
+
+                if (testMethodRanges.length > 0) {
+                    const testMethod = testMethodRanges.pop();
+                    const testItem = codeunitItem!.children.get(testMethod!.name);
+                    resolve(testItem);
+                }
             }
-        }
-        else {
-            resolve(undefined);
+            else {
+                resolve(undefined);
+            }
+        } catch (ex) {
+            reject(ex);
         }
     });
 }
