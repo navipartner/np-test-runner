@@ -20,6 +20,7 @@ import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
 import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError, InvocationResult } from 'node-powershell';
 import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
+import { TestRunnerWorkflow } from './testRunnerWorkflow'
 import * as path from 'path';
 import { exec } from 'child_process';
 import * as semver from 'semver';
@@ -31,6 +32,7 @@ let debugChannel: vscode.OutputChannel;
 let debugChannelActivated: boolean = false;
 var powershellSession = null;
 var powershellSessionReady = false;
+var testRunnerWorkflow = new TestRunnerWorkflow();
 const pwshCallMutex = new Mutex();
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
@@ -91,7 +93,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(alTestController);
 
-	registerCommands(context);
+	registerCommands(context, testRunnerWorkflow);
 
 	context.subscriptions.push(createCodeCoverageStatusBarItem());
 	context.subscriptions.push(createPerformanceStatusBarItem());
@@ -141,10 +143,18 @@ export function activate(context: vscode.ExtensionContext) {
 	alTestController = createTestController();
 	context.subscriptions.push(alTestController);
 
-    vscode.workspace.onDidOpenTextDocument(event => { discoverTestsInDocument(event) });
+    enableCheckTestsInActiveDocuments();
+}
 
-    // Optionally, you can also handle already opened documents
-    //vscode.workspace.textDocuments.forEach(discoverTestsInDocument);
+async function enableCheckTestsInActiveDocuments() {
+	let analysisPromises = null;
+	vscode.window.onDidChangeVisibleTextEditors(async (editors) => {
+        analysisPromises = editors.map(editor => discoverTestsInDocument(editor.document));
+    });
+
+	const initialAnalysisPromises = vscode.window.visibleTextEditors.map(editor => discoverTestsInDocument(editor.document));
+
+	await Promise.all([analysisPromises, initialAnalysisPromises]);
 }
 
 export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {

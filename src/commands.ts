@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { debugTestHandler, getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
-import { getALTestRunnerConfig, getALTestRunnerConfigPath, getALTestRunnerPath, getLaunchConfiguration, setALTestRunnerConfig } from './config';
+import { getALTestRunnerConfig, getALTestRunnerConfigPath, getALTestRunnerPath, getLaunchConfiguration, setALTestRunnerConfig, getCurrentWorkspaceConfig } from './config';
 import { existsSync, readdirSync, unlinkSync } from 'fs';
 import { invokePowerShellCmd, triggerUpdateDecorations } from './extension';
 import { downloadClientSessionLibraries } from './clientContextDllHelper';
@@ -10,8 +10,9 @@ import { showTableData } from './showTableData';
 import { runRelatedTests, showRelatedTests } from './testCoverage';
 import { listALFiles } from './alFileHelper';
 import { showPerformanceProfile } from './performance';
+import { TestRunnerWorkflow } from './testRunnerWorkflow';
 
-export function registerCommands(context: vscode.ExtensionContext) {
+export function registerCommands(context: vscode.ExtensionContext, testRunnerWorkflow: TestRunnerWorkflow) {
 	context.subscriptions.push(vscode.commands.registerCommand('npaltestrunner.runAllTests', async (extensionId?: string, extensionName?: string) => {
 		runTestHandler(new vscode.TestRunRequest());
 	}));
@@ -93,4 +94,31 @@ export function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('npaltestrunner.downloadClientSessionLibraries', async () => {
 		await downloadClientSessionLibraries();
 	}));
+
+	// Get workflows from configuration
+    const config = getCurrentWorkspaceConfig(false);
+    const workflows = config.get('workflows') as any;
+		
+    if (workflows) {
+        Object.keys(workflows).forEach(workflowName => {
+            const commandId = `npaltestrunner.run${workflowName.charAt(0).toUpperCase() + workflowName.slice(1)}`;
+            context.subscriptions.push(vscode.commands.registerCommand(commandId, async (filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string) => {
+				testRunnerWorkflow.runWorkflow(workflowName, filename, selectionStart, extensionId, extensionName).catch((exception) => {
+					vscode.window.showErrorMessage(exception.message, exception.stack);
+				});
+            }));
+            
+			/*
+            // Register keybindings dynamically (optional)
+            const keybinding = config.get(`keybindings.${workflowName}`) as string;
+            if (keybinding) {
+                context.subscriptions.push(vscode.commands.registerKeybinding(commandId, {
+                    key: keybinding,
+                    when: 'editorTextFocus',
+                    command: commandId
+                }));
+            }
+			*/
+        });
+    }
 }
