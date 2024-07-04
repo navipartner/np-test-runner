@@ -97,7 +97,7 @@ export function registerCommands(context: vscode.ExtensionContext, testRunnerWor
 
 	context.subscriptions.push(vscode.commands.registerCommand(`npaltestrunner.runSelectedWorkflow`, async (filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string) => {
 		testRunnerWorkflow.runSelectedWorkflow(filename, selectionStart, extensionId, extensionName).catch((exception) => {
-			vscode.window.showErrorMessage(exception.message, exception.stack);
+			vscode.window.showErrorMessage("Can't run selected workflow!", "Please, create a workflow and then select it.", exception.message, exception.stack);
 		});
 	}));
 }

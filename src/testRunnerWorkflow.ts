@@ -19,6 +19,9 @@ export class TestRunnerWorkflow {
     public async runSelectedWorkflow(filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string): Promise<void> {
         const config = getCurrentWorkspaceConfig(false);
         const selectedWorkflow = config.get('selectedWorkflow') as string;
+        if (selectedWorkflow == null) {
+            throw new Error(`You haven't selected any workflow yet! Use parameter 'selectedWorkflow' to specify the workflow name.`);
+        }
         return await this.runWorkflow(selectedWorkflow, filename, selectionStart, extensionId, extensionName);
     }
 
