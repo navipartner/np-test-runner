@@ -95,30 +95,9 @@ export function registerCommands(context: vscode.ExtensionContext, testRunnerWor
 		await downloadClientSessionLibraries();
 	}));
 
-	// Get workflows from configuration
-    const config = getCurrentWorkspaceConfig(false);
-    const workflows = config.get('workflows') as any;
-		
-    if (workflows) {
-        Object.keys(workflows).forEach(workflowName => {
-            const commandId = `npaltestrunner.run${workflowName.charAt(0).toUpperCase() + workflowName.slice(1)}`;
-            context.subscriptions.push(vscode.commands.registerCommand(commandId, async (filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string) => {
-				testRunnerWorkflow.runWorkflow(workflowName, filename, selectionStart, extensionId, extensionName).catch((exception) => {
-					vscode.window.showErrorMessage(exception.message, exception.stack);
-				});
-            }));
-            
-			/*
-            // Register keybindings dynamically (optional)
-            const keybinding = config.get(`keybindings.${workflowName}`) as string;
-            if (keybinding) {
-                context.subscriptions.push(vscode.commands.registerKeybinding(commandId, {
-                    key: keybinding,
-                    when: 'editorTextFocus',
-                    command: commandId
-                }));
-            }
-			*/
-        });
-    }
+	context.subscriptions.push(vscode.commands.registerCommand(`npaltestrunner.runSelectedWorkflow`, async (filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string) => {
+		testRunnerWorkflow.runSelectedWorkflow(filename, selectionStart, extensionId, extensionName).catch((exception) => {
+			vscode.window.showErrorMessage(exception.message, exception.stack);
+		});
+	}));
 }

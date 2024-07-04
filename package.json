@@ -16,7 +16,7 @@
 	"files": [
 		"PowerShell/"
 	],
-	"version": "0.28.0",
+	"version": "0.28.1",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -127,6 +127,11 @@
 				"command": "npaltestrunner.downloadClientSessionLibraries",
 				"title": "Download BC Client Session libraries",
 				"category": "NP AL Test Runner"
+			},
+			{
+				"command": "npaltestrunner.runSelectedWorkflow",
+				"title": "Run Default Test Workflow",
+				"category": "NP AL Test Runner"
 			}
 		],
 		"keybindings": [
@@ -147,6 +152,10 @@
 				"command": "npaltestrunner.toggleCodeCoverage",
 				"key": "Ctrl+Alt+C",
 				"when": "false"
+			},
+			{
+				"command": "npaltestrunner.runSelectedWorkflow",
+				"key": "Ctrl+Alt+W"
 			}
 		],
 		"configuration": [
@@ -306,7 +315,9 @@
 						"scope": "resource",
 						"description": "Outputs code coverage statistics with test results and decorates covered lines with the Toggle Code Coverage command. See also the Code Coverage Path extension setting and key in the AL Test Runner config.json file.",
 						"default": false,
-						"anyOf": [false]
+						"anyOf": [
+							false
+						]
 					},
 					"np-al-test-runner.enablePerformanceProfiler": {
 						"type": "boolean",
@@ -339,12 +350,6 @@
 						"description": "Timeout (milliseconds) for publishing apps from PowerShell",
 						"default": 20000
 					},
-					"np-al-test-runner.automaticPublishing": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Automatically publish apps to the container when compiling",
-						"default": false
-					},
 					"np-al-test-runner.sendDebugTelemetry": {
 						"type": "boolean",
 						"scope": "resource",
@@ -359,6 +364,58 @@
 							"tests",
 							"test"
 						]
+					},
+					"np-al-test-runner.selectedWorkflow": {
+						"type": "string",
+						"scope": "resource",
+						"default": "defaultWorkflow"
+					},
+					"np-al-test-runner.workflows": {
+						"type": "object",
+						"description": "Test Runner Workflows",
+						"default": {
+							"defaultWorkflow": {
+								"compile": true,
+								"publish": "viaDevEndpoint",
+								"test": "functionAtCursor",
+								"debug": false
+							}
+						},
+						"additionalProperties": {
+							"type": "object",
+							"properties": {
+								"compile": {
+									"type": "boolean",
+									"default": false,
+									"description": "Compile before running tests"
+								},
+								"publish": {
+									"type": "string",
+									"enum": [
+										"viaDevEndpoint",
+										"alPublish",
+										"alRapidPublish"
+									],
+									"default": null,
+									"description": "Publish before running tests"
+								},
+								"test": {
+									"type": "string",
+									"enum": [
+										"all",
+										"activeDocument",
+										"functionAtCursor"
+									],
+									"default": "functionAtCursor",
+									"description": "Test scope"
+								},
+								"debug": {
+									"type": "boolean",
+									"default": false,
+									"description": "Run in debug mode"
+								}
+							}
+						}
 					}
 				}
 			}

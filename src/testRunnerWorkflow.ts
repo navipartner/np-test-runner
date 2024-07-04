@@ -16,6 +16,12 @@ export class TestRunnerWorkflow {
         return workflows ? workflows[workflowName] : null;        
     }
 
+    public async runSelectedWorkflow(filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string): Promise<void> {
+        const config = getCurrentWorkspaceConfig(false);
+        const selectedWorkflow = config.get('selectedWorkflow') as string;
+        return await this.runWorkflow(selectedWorkflow, filename, selectionStart, extensionId, extensionName);
+    }
+
     public async runWorkflow(workflowName: string, filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string): Promise<void> {
         const workflow = this.getConfig(workflowName);
         let testItem: vscode.TestItem = null;
