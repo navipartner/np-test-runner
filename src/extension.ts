@@ -24,12 +24,14 @@ import * as path from 'path';
 import { exec } from 'child_process';
 import * as semver from 'semver';
 import { error } from 'console';
+import { Mutex } from 'async-mutex';
 
 let terminal: vscode.Terminal;
 let debugChannel: vscode.OutputChannel;
 let debugChannelActivated: boolean = false;
 var powershellSession = null;
 var powershellSessionReady = false;
+const pwshCallMutex = new Mutex();
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
 const config = vscode.workspace.getConfiguration('np-al-test-runner');
@@ -315,94 +317,102 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		})
 	}
 
-	if (powershellSession === null) {
-		let powershellOptions : PowerShellOptions = {
-			executable: PSExecutableType.PowerShellCore,
-			throwOnInvocationError: true,
-			executableOptions: {
-				'-NoLogo': true,
-				'-NoExit': true,
-				"-NonInteractive": true
-			}
-		}
-
-		powershellSession = new PowerShell(powershellOptions);
-
-		try { 
-			
-			await powershellSession.invoke(`$ErrorActionPreference = "Stop"`);
-
-			let alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
-			await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`);
-
-			let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
-			await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`);
-
-			let npClientContextDotNetPath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'ClientContextDotNet', 'ClientContextDotNet.psm1');
-			await powershellSession.invoke(`Import-Module ${npClientContextDotNetPath}`);
-		
-			let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
-			await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`);
-
-		} catch(e) {
-			if (powershellSession) {
-				await powershellSession.dispose();
-				powershellSession = null;
-			}
-			throw e;
-		}
-	}
-
+	const release = await pwshCallMutex.acquire();
+	
 	try {
-		console.log(command);
-		let result = await powershellSession.invoke(command);
-		return result;
-	} catch(error) {
-		let errorMsg = null;
-		let errorStack = null;
-		let errorException = null;
-		let hasErrorDetails = false;
+		if (powershellSession === null) {
+			let powershellOptions : PowerShellOptions = {
+				executable: PSExecutableType.PowerShellCore,
+				throwOnInvocationError: true,
+				executableOptions: {
+					'-NoLogo': true,
+					'-NoExit': true,
+					"-NonInteractive": true
+				}
+			}
 
-		try {			
-			errorMsg = extractPowerShellError(error.message);
-			errorStack = extractPowerShellError(error.stack);
+			powershellSession = new PowerShell(powershellOptions);
+
+			try { 
+				
+				await powershellSession.invoke(`$ErrorActionPreference = "Stop"`);
+
+				let alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
+				await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`);
+
+				let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
+				await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`);
+
+				let npClientContextDotNetPath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'ClientContextDotNet', 'ClientContextDotNet.psm1');
+				await powershellSession.invoke(`Import-Module ${npClientContextDotNetPath}`);
 			
-			const errorSegments = tryToParsePowerShellComplexError(errorMsg);
-			if ((errorSegments) && (errorSegments.length == 4) && (errorSegments[0] == 'pwshexception')) {
-				errorMsg = errorSegments[1];
-				errorStack = errorSegments[2];
-				errorException = errorSegments[3];
-				hasErrorDetails = true;
-			}
+				let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
+				await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`);
 
-			writeToOutputChannel(`${command}  =>  ${errorMsg}`);
-			writeToOutputChannel(`			  =>  ${errorStack}`);
-
-			if (hasErrorDetails) {
-				console.log(`${command}  =>  ${errorMsg}`);
-				console.log(`			  =>  ${errorStack}`);
-				console.log(`			  =>  ${errorException}`);
-			} else {
-				console.log(error);
+			} catch(e) {
+				if (powershellSession) {
+					await powershellSession.dispose();
+					powershellSession = null;
+				}
+				throw e;
 			}
-		} catch {
-			console.log(error);
 		}
 
 		try {
-			if ((debugChannel) && (!debugChannelActivated)) {
-				debugChannel.show(false);
-				debugChannelActivated = true;
-			}
-		} catch(e) {
-			console.log(`Can't open PowerShell invocation error channel: ${e}`);
-		}
+			console.log(command);
+			let result = await powershellSession.invoke(command);
+			return result;
+		} catch(error) {
+			let errorMsg = null;
+			let errorStack = null;
+			let errorException = null;
+			let hasErrorDetails = false;
 
-		if (errorMsg != null) {
-			throw errorMsg;
-		} else {
-			throw error;
+			try {			
+				errorMsg = extractPowerShellError(error.message);
+				errorStack = extractPowerShellError(error.stack);
+				
+				const errorSegments = tryToParsePowerShellComplexError(errorMsg);
+				if ((errorSegments) && (errorSegments.length == 4) && (errorSegments[0] == 'pwshexception')) {
+					errorMsg = errorSegments[1];
+					errorStack = errorSegments[2];
+					errorException = errorSegments[3];
+					hasErrorDetails = true;
+				}
+
+				writeToOutputChannel(`${command}  =>  ${errorMsg}`);
+				writeToOutputChannel(`			  =>  ${errorStack}`);
+
+				if (hasErrorDetails) {
+					console.log(`${command}  =>  ${errorMsg}`);
+					console.log(`			  =>  ${errorStack}`);
+					console.log(`			  =>  ${errorException}`);
+				} else {
+					console.log(error);
+				}
+			} catch {
+				console.log(error);
+			}
+
+			try {
+				if ((debugChannel) && (!debugChannelActivated)) {
+					debugChannel.show(false);
+					debugChannelActivated = true;
+				}
+			} catch(e) {
+				console.log(`Can't open PowerShell invocation error channel: ${e}`);
+			}
+
+			if (errorMsg != null) {
+				throw errorMsg;
+			} else {
+				throw error;
+			}
 		}
+	} catch (ex) {
+		throw ex;
+	} finally {
+		release();
 	}
 }
 
