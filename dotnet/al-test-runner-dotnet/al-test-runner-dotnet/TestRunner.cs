@@ -25,6 +25,18 @@ namespace NaviPartner.ALTestRunner
         public const int NumberOfUnexpectedFailuresBeforeAborting = 50;
         public int TestPage { get; private set; }
         public string TestSuite { get; private set; }
+
+        public string ClientSessionId { 
+            get
+            {
+                if (this.ClientSession == null)
+                    return "";
+                if (this.ClientSession.Info == null)
+                    return "";
+                return this.ClientSession.Info.SessionId;
+            } 
+        }
+
         public TestRunner(string serviceUrl, string authenticationScheme, ICredentials credential,
             TimeSpan interactionTimeout, string culture) : base(serviceUrl, authenticationScheme, credential, interactionTimeout, culture)
         {
