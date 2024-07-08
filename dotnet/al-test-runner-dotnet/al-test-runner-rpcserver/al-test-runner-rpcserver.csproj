@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>NaviPartner.ALTestRunner.RpcServer</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishAot>False</PublishAot>
+    <PublishTrimmed>False</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StreamJsonRpc" Version="2.18.48" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\al-test-runner-dotnet\al-test-runner-dotnet.csproj" />
+  </ItemGroup>  
+
+</Project>

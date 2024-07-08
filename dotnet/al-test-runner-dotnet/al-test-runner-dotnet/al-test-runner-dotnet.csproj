@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="8.0.4" />
     <Reference Include="Microsoft.Dynamics.Framework.UI.Client">
       <HintPath>libs\Microsoft.Dynamics.Framework.UI.Client.dll</HintPath>
       <Private>False</Private>
