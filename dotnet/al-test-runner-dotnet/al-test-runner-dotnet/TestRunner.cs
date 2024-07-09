@@ -9,6 +9,7 @@ using Newtonsoft.Json.Converters;
 using Microsoft.Dynamics.Framework.UI.Client;
 using Newtonsoft.Json;
 using System.Collections;
+using NaviPartner.ALTestRunner.Integration;
 
 namespace NaviPartner.ALTestRunner
 {
@@ -39,6 +40,11 @@ namespace NaviPartner.ALTestRunner
 
         public TestRunner(string serviceUrl, string authenticationScheme, ICredentials credential,
             TimeSpan interactionTimeout, string culture) : base(serviceUrl, authenticationScheme, credential, interactionTimeout, culture)
+        {
+        }
+
+        public TestRunner(string serviceUrl, BCAuthScheme authenticationScheme, ICredentials credential,
+            TimeSpan interactionTimeout, string culture) : base(serviceUrl, authenticationScheme.ToString(), credential, interactionTimeout, culture)
         {
         }
 
