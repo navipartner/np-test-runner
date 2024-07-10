@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using NaviPartner.ALTestRunner;
+using NaviPartner.ALTestRunner.Integration;
 
 namespace NaviPartner.ALTestRunner.Server
 {
@@ -8,8 +9,6 @@ namespace NaviPartner.ALTestRunner.Server
         private static TestRunnerService _instance;
         private static readonly object _lock = new object();
         private Dictionary<string, object> _sessions = new Dictionary<string, object>();
-
-        private TestRunnerService() { }
 
         public static TestRunnerService GetInstance()
         {
@@ -26,32 +25,25 @@ namespace NaviPartner.ALTestRunner.Server
             return _instance;
         }
 
-        public string CreateSession(string serviceUrl, string authenticationScheme, ICredentials credential,
-            TimeSpan interactionTimeout, string culture)
-        {
-            // Logic to create a new session
-            string sessionId = Guid.NewGuid().ToString();
-            _sessions[sessionId] = new TestRunner(serviceUrl, authenticationScheme, credential, interactionTimeout, culture); // Initialize your DLL class here
-            return sessionId;
-        }
-
         public object GetSession(string sessionId)
         {
             return _sessions[sessionId];
         }
 
-        // Add methods to interact with your DLL class
-        public void SetupTestRun(string sessionId, int testPage, string testSuite, int testRunnerCodeunit, string extensionId = "", string testCodeunitsRange = "",
-            string testProcedureRange = "", DisabledTest[] disabledTests = null, bool stabilityRun = false)
+        public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, TestContext tests, 
+            Guid extensionId, string extensionName, string fileName, int selectionStart, string? sessionId = null)
         {
-            var session = GetSession(sessionId) as TestRunner;
-            session.SetupTestRun(testPage, testSuite, extensionId, testCodeunitsRange, testProcedureRange, testRunnerCodeunit, disabledTests, stabilityRun);
-        }
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                sessionId = Guid.NewGuid().ToString();
+                _sessions[sessionId] = new TestRunnerIntegration();
+            }
 
-        public Array RunAllTests(string sessionId)
-        {
-            var session = GetSession(sessionId) as TestRunner;
-            return session.RunAllTests();
+            var session = GetSession(sessionId) as TestRunnerIntegration;
+            var result = await session.InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, tests, 
+                extensionId, extensionName, fileName, selectionStart);
+
+            return result;
         }
     }
 }

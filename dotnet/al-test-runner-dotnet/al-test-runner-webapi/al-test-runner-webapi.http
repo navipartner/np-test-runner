@@ -1,0 +1,20 @@
+@schema = http
+@hostname = localhost
+@port = 5000
+@host = {{hostname}}:{{port}}
+@contentType = application/json
+
+POST {{schema}}://{{host}}/TestRunner/invokeAlTests HTTP/1.1
+Content-Type: {{contentType}}
+accept: */*
+
+{
+    "alTestRunnerExtPath": "C:/Users/JakubVanak/Documents/Repos/NaviPartner/np-al-test-runner-fork/",
+    "alProjectPath": "C:/Users/JakubVanak/Documents/AL/01/",
+    "smbAlExtPath": "C:/Users/JakubVanak/.vscode/extensions/ms-dynamics-smb.al-13.1.1065068/",
+    "tests": "Test",
+    "extensionId": "147e6578-22ea-4f84-a6d8-10ce11ad0b04",
+    "extensionName": "01",
+    "fileName": "C:/Users/JakubVanak/Documents/AL/01/tests.al",
+    "selectionStart": "0"
+}

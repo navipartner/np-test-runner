@@ -2,6 +2,7 @@
 using CommandLine;
 using NaviPartner.ALTestRunner;
 using NaviPartner.ALTestRunner.CLI.Options;
+using NaviPartner.ALTestRunner.Integration;
 
 namespace NaviPartner.ALTestRunner.CLI;
 
@@ -9,11 +10,12 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        Parser.Default.ParseArguments<SetupOptions, ExecuteOptions, GetResultsOptions>(args)
+        Parser.Default.ParseArguments<SetupOptions, ExecuteOptions, GetResultsOptions, InvokeALTestsOptions>(args)
             .MapResult(
                 (SetupOptions opts) => SetupTestRun(opts),
                 (ExecuteOptions opts) => ExecuteTests(opts),
                 (GetResultsOptions opts) => GetTestResults(opts),
+                (InvokeALTestsOptions opts) => InvokeALTests(opts),
                 errs => 1);
     }
 
@@ -43,5 +45,14 @@ internal class Program
         Console.WriteLine($"Test results: {results}");
         return 0;
         */
+    }
+
+    static int InvokeALTests(InvokeALTestsOptions opts)
+    {
+        TestRunnerIntegration testRunner = new TestRunnerIntegration();
+        var result = testRunner.InvokeALTests(opts.AlTestRunnerExtPath, opts.AlProjectPath, opts.SmbAlExtPath, opts.Tests,
+            opts.ExtensionId, opts.ExtensionName, opts.FileName, opts.SelectionStart);
+        Console.WriteLine(result);
+        return 0;
     }
 }

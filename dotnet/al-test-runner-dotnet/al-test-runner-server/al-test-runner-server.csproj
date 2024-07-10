@@ -7,10 +7,19 @@
     <RootNamespace>NaviPartner.ALTestRunner.Server</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
     <PublishAot>true</PublishAot>
+    <EnableDefaultJsonSerializationContext>true</EnableDefaultJsonSerializationContext>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\al-test-runner-dotnet\al-test-runner-dotnet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <JsonSerializerContext Include="NaviPartner.ALTestRunner.Server.Requests.InvokeALTestsRequest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <JsonSerializable Include="NaviPartner.ALTestRunner.Server.Requests.InvokeALTestsRequest" />
   </ItemGroup>
 
 </Project>

@@ -1,10 +1,7 @@
 ﻿using StreamJsonRpc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NaviPartner.ALTestRunner;
+using NaviPartner.ALTestRunner.Integration;
+using System.IO.Pipes;
+using System.Net.Sockets;
 using System.Net;
 
 namespace NaviPartner.ALTestRunner.RpcServer
@@ -13,47 +10,52 @@ namespace NaviPartner.ALTestRunner.RpcServer
     {
         private TestRunner _testRunner;
         private TestRunnerIntegration _testRunnerIntegration;
-
+        private JsonRpc _rpc;
         public TestRunnerRpcServer()
         {
         }
 
-        public async Task<Array> InvokeALTests(string alProjectPath, string smbAlExtPath, string tests, string extensionId, string extensionName, string fileName,
-            int selectionStart)
+        public async Task StartServer(int port)
+        {
+            var listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            Console.WriteLine($"Server listening on port {port}");
+
+            while (true)
+            {
+                try
+                {
+                    using (var client = await listener.AcceptTcpClientAsync())
+                    {
+                        Console.WriteLine("Client connected");
+                        var stream = client.GetStream();
+                        _rpc = JsonRpc.Attach(stream, this);
+                        await _rpc.Completion;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                }
+            }
+        }
+
+        [JsonRpcMethod("InvokeALTests")]
+        public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, string tests, 
+            string extensionId, string extensionName, string fileName, int selectionStart)
         {
             _testRunnerIntegration = new TestRunnerIntegration();
-            return await _testRunnerIntegration.InvokeALTests(alProjectPath, smbAlExtPath, tests, extensionId, extensionName, fileName, selectionStart);
+            return await _testRunnerIntegration.InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, tests, extensionId, 
+                extensionName, fileName, selectionStart);
         }
 
-        /*
-        public void OpenClientSession(string serviceUrl, string authenticationScheme, ICredentials credential,
-            TimeSpan interactionTimeout, string culture)
+        [JsonRpcMethod("InvokeALTestsSync")]
+        public void InvokeALTestsSync(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, string tests,
+            string extensionId, string extensionName, string fileName, int selectionStart)
         {
-            _testRunner = new TestRunner(serviceUrl, authenticationScheme, credential, interactionTimeout, culture);
+            _testRunnerIntegration = new TestRunnerIntegration();
+            _testRunnerIntegration.InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, tests, extensionId,
+                extensionName, fileName, selectionStart);
         }
-
-        public void OpenClientSession(string serviceUrl, string authenticationScheme, string userName, string userPassword,
-            TimeSpan interactionTimeout, string culture)
-        {
-            var credential = new NetworkCredential(userName, userPassword);
-            _testRunner = new TestRunner(serviceUrl, authenticationScheme, credential, interactionTimeout, culture);
-        }
-
-        public void CloseClientSession()
-        {
-            _testRunner.CloseSession();
-        }
-
-        public void SetupTestRun(int testPage, string testSuite, int testRunnerCodeunit, string extensionId = "", string testCodeunitsRange = "",
-            string testProcedureRange = "", DisabledTest[] disabledTests = null, bool stabilityRun = false)
-        {
-            _testRunner.SetupTestRun(testPage, testSuite, extensionId, testCodeunitsRange, testProcedureRange, testRunnerCodeunit, disabledTests, stabilityRun);
-        }
-
-        public Array RunAllTests()
-        {
-            return _testRunner.RunAllTests();
-        }
-        */
     }
 }

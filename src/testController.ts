@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getALObjectFromPath, getALObjectOfDocument, getFilePathOfObject, getTestMethodRangesFromDocument } from './alFileHelper';
 import { getALTestRunnerConfig, getCurrentWorkspaceConfig, getLaunchConfiguration, launchConfigIsValid, selectLaunchConfig, setALTestRunnerConfig, getALTestRunnerConfigKeyValue } from './config';
-import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, invokeTestRunner, outputWriter, getLastResultPath, getSmbAlExtensionPath } from './extension';
+import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, invokeTestRunner, outputWriter, getLastResultPath, getSmbAlExtensionPath, 
+    invokeTestRunnerViaHttp, getExtension, getDocumentWorkspaceFolder } from './extension';
 import { ALTestAssembly, ALTestResult, ALMethod, DisabledTest, ALFile, launchConfigValidity, CodeCoverageDisplay } from './types';
 import * as path from 'path';
 import { sendDebugEvent, sendTestDebugStartEvent, sendTestRunFinishedEvent, sendTestRunStartEvent } from './telemetry';
@@ -232,7 +233,11 @@ export async function runTest(filename?: string, selectionStart?: number, extens
 
                 sendDebugEvent('runTest-ready', { filename: filename, selectionStart: selectionStart.toString(), extensionId: extensionId!, extensionName: extensionName! });
                 
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests Test -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -FileName "${filename}" -SelectionStart ${selectionStart} -ResultsFilePath ${resultsFilePath}`);
+                //const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests Test -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -FileName "${filename}" -SelectionStart ${selectionStart} -ResultsFilePath ${resultsFilePath}`);
+                const alProjectFolderPath = await getDocumentWorkspaceFolder();
+                const results: ALTestAssembly[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "Test", 
+                    extensionId, extensionName, filename, selectionStart);
+                
                 resolve(results);
             }
             else {

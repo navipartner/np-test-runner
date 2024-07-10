@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { readFileSync, existsSync, unlinkSync } from 'fs';
+import * as fs from 'fs';
 import * as xml2js from 'xml2js';
 import * as types from './types';
 import { CodelensProvider } from './codelensProvider';
@@ -22,10 +22,12 @@ import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError, Invoc
 import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
 import { TestRunnerWorkflow } from './testRunnerWorkflow'
 import * as path from 'path';
-import { exec } from 'child_process';
+import * as cp from 'child_process';
 import * as semver from 'semver';
 import { error } from 'console';
 import { Mutex } from 'async-mutex';
+import * as webApiSrv from './webapiserver';
+
 
 let terminal: vscode.Terminal;
 let debugChannel: vscode.OutputChannel;
@@ -33,6 +35,7 @@ let debugChannelActivated: boolean = false;
 var powershellSession = null;
 var powershellSessionReady = false;
 var testRunnerWorkflow = new TestRunnerWorkflow();
+let testRunnerSrv: webApiSrv.TestRunnerWebApiServer = null;
 const pwshCallMutex = new Mutex();
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
@@ -144,6 +147,8 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(alTestController);
 
     enableCheckTestsInActiveDocuments();
+
+	startTestRunnerRpcServerClient(context);
 }
 
 async function enableCheckTestsInActiveDocuments() {
@@ -155,6 +160,14 @@ async function enableCheckTestsInActiveDocuments() {
 	const initialAnalysisPromises = vscode.window.visibleTextEditors.map(editor => discoverTestsInDocument(editor.document));
 
 	await Promise.all([analysisPromises, initialAnalysisPromises]);
+}
+
+export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alProjectPath: string, smbAlExtPath: string, tests: string, extensionId: string,
+	extensionName: string, fileName: string, selectionStart: number): Promise<types.ALTestAssembly[]> {
+	
+		throw new Error('TODO: Implement HTTP call to start tests.')
+		//return await rpcClient.InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, tests, extensionId, extensionName, 
+		//fileName, selectionStart);
 }
 
 export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {
@@ -192,8 +205,8 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 			command += ' -GetPerformanceProfile';
 		}
 
-		if (existsSync(getLastResultPath())) {
-			unlinkSync(getLastResultPath());
+		if (fs.existsSync(getLastResultPath())) {
+			fs.unlinkSync(getLastResultPath());
 		}
 
 		await vscode.window.withProgress({
@@ -206,11 +219,14 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 			try {
 				await invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
 				await invokePowerShellCmd(config.preTestCommand);
+				
 				await invokePowerShellCmd(command).then((result) => {
 
 				}).catch((error) => {
 					vscode.window.showErrorMessage(`Test execution failed`, error);
 				});
+				
+				//await rpcClient.OpenClientSession();
 
 				await invokePowerShellCmd(config.postTestCommand);
 		
@@ -236,7 +252,7 @@ export async function invokeTestRunner(command: string): Promise<types.ALTestAss
 async function readTestResults(uri: vscode.Uri): Promise<types.ALTestAssembly[]> {
 	return new Promise(async resolve => {
 		const xmlParser = new xml2js.Parser();
-		const resultXml = readFileSync(uri.fsPath, { encoding: 'utf-8' });
+		const resultXml = fs.readFileSync(uri.fsPath, { encoding: 'utf-8' });
 		const resultObj = await xmlParser.parseStringPromise(resultXml);
 		const assemblies: types.ALTestAssembly[] = resultObj.assemblies.assembly;
 
@@ -333,7 +349,7 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		if (powershellSession === null) {
 			let powershellOptions : PowerShellOptions = {
 				executable: PSExecutableType.PowerShellCore,
-				throwOnInvocationError: true,
+				throwOnInvocationError: false,
 				executableOptions: {
 					'-NoLogo': true,
 					'-NoExit': true,
@@ -485,14 +501,14 @@ function updateDecorations() {
 	let testMethodRanges: types.ALMethodRange[] = getTestMethodRangesFromDocument(activeEditor!.document);
 
 	let resultFileName = getALTestRunnerPath() + '\\Results\\' + sanitize(getDocumentIdAndName(activeEditor!.document)) + '.xml';
-	if (!(existsSync(resultFileName))) {
+	if (!(fs.existsSync(resultFileName))) {
 		setDecorations(passingTests, failingTests, getUntestedTestDecorations(testMethodRanges));
 		return;
 	}
 
 	const xmlParser = new xml2js.Parser();
 
-	let resultXml = readFileSync(resultFileName, { encoding: 'utf-8' });
+	let resultXml = fs.readFileSync(resultFileName, { encoding: 'utf-8' });
 	xmlParser.parseStringPromise(resultXml).then(resultObj => {
 		const collection = resultObj.assembly.collection;
 		const tests = collection.shift()!.test as Array<types.ALTestResult>;
@@ -664,14 +680,14 @@ export function getCodeunitIdFromAssemblyName(assemblyName: string): number {
 
 export function getLaunchJson() {
 	const launchPath = getLaunchJsonPath();
-	const data = readFileSync(launchPath, { encoding: 'utf-8' });
+	const data = fs.readFileSync(launchPath, { encoding: 'utf-8' });
 	return JSON.parse(data);
 }
 
 export function getAppJsonKey(keyName: string) {
 	sendDebugEvent('getAppJsonKey-start', { keyName: keyName });
 	const appJsonPath = path.join(getTestFolderPath(), 'app.json');
-	const data = readFileSync(appJsonPath, { encoding: 'utf-8' });
+	const data = fs.readFileSync(appJsonPath, { encoding: 'utf-8' });
 	const appJson = JSON.parse(data.charCodeAt(0) === 0xfeff
 		? data.slice(1) // Remove BOM
 		: data);
@@ -689,6 +705,10 @@ export function deactivate() {
 	if (powershellSession) {
 		powershellSession.dispose();
 	}
+
+	if (testRunnerSrv) {
+		testRunnerSrv.stopServer();
+	}	
  }
 
 export async function getRunnerParams(command: string): Promise<types.ALTestAssembly[]> {
@@ -724,8 +744,8 @@ export async function getRunnerParams(command: string): Promise<types.ALTestAsse
 			command += ' -GetPerformanceProfile';
 		}
 
-		if (existsSync(getLastResultPath())) {
-			unlinkSync(getLastResultPath());
+		if (fs.existsSync(getLastResultPath())) {
+			fs.unlinkSync(getLastResultPath());
 		}
 
 		invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`).then(() => {
@@ -774,7 +794,7 @@ export async function checkMissingButConfiguredClientSessionLibsAndDownload() : 
 
 function checkPowerShellVersion(): Promise<string> {
     return new Promise((resolve, reject) => {
-        exec('pwsh -v', (error, stdout, stderr) => {
+        cp.exec('pwsh -v', (error, stdout, stderr) => {
             if (error) {
                 reject(`Error executing PowerShell: ${error.message}`);
             } else {
@@ -786,7 +806,7 @@ function checkPowerShellVersion(): Promise<string> {
 
 function checkDotNetVersion(): Promise<string> {
     return new Promise((resolve, reject) => {
-        exec('dotnet --version', (error, stdout, stderr) => {
+        cp.exec('dotnet --version', (error, stdout, stderr) => {
             if (error) {
                 reject(`Error checking .NET version: ${error.message}`);
             } else {
@@ -840,4 +860,13 @@ function showMissingPrerequisiteErrorMessage(message: string, link: string) {
             vscode.env.openExternal(vscode.Uri.parse(link));
         }
     });
+}
+
+async function startTestRunnerRpcServerClient(context: vscode.ExtensionContext) {
+	if ((testRunnerSrv) && (testRunnerSrv.IsRunning)) {
+		return;
+	}
+
+	testRunnerSrv = new webApiSrv.TestRunnerWebApiServer();
+	testRunnerSrv.startServer(context);
 }

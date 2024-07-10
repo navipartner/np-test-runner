@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getCurrentWorkspaceConfig } from './config'
 import { getTestFolderPath } from './alFileHelper'
-import { publishAppFile } from './publish';
+import { publishAppFileUsingPwsh } from './publish';
 import { documentIsTestCodeunit, getTestMethodRangesFromDocument } from './alFileHelper';
 import { debugTestHandler, getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
 
@@ -131,7 +131,7 @@ export class TestRunnerWorkflow {
                     if (this.lastCompiledAppFile == null) {
                         throw new Error("Before publishing, you have to compile first! Verify compilation step is properly configured and has been executed successfully!");
                     }
-                    await publishAppFile(this.lastCompiledAppFile);
+                    await publishAppFileUsingPwsh(this.lastCompiledAppFile);
                     break;
                 case "alPublish":
                     break;
