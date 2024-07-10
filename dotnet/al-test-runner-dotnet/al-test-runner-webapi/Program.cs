@@ -1,3 +1,4 @@
+using System.Net;
 
 namespace NaviPartner.ALTestRunner.WebApi
 {
@@ -7,7 +8,11 @@ namespace NaviPartner.ALTestRunner.WebApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            int port = ParsePort(args);
+            builder.WebHost.ConfigureKestrel(serverOptions =>
+            {
+                serverOptions.Listen(IPAddress.Loopback, port);
+            });
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -31,6 +36,18 @@ namespace NaviPartner.ALTestRunner.WebApi
             app.MapControllers();
 
             app.Run();
+        }
+
+        private static int ParsePort(string[] args)
+        {
+            const int defaultPort = 63731; // Default port if not specified
+
+            if (args.Length > 0 && int.TryParse(args[0], out int port))
+            {
+                return port;
+            }
+
+            return defaultPort;
         }
     }
 }
