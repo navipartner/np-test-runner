@@ -114,7 +114,7 @@ namespace NaviPartner.ALTestRunner
                     case ClientSessionState.TimedOut:
                         throw new Exception("ClientSession time out");
                     case ClientSessionState.Uninitialized:
-                        throw new Exception("ClientSession is Unitialized");
+                        throw new Exception("ClientSession is Uninitialized");
                 }
 
                 // ClientSession.LastException is present on the latest versions, not for BC 17 and maybe some highers too.
