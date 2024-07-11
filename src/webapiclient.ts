@@ -54,9 +54,17 @@ export class TestRunnerWebApiClient {
         }
     }
 
-    public async invokeAlTests(params: any, progressDialogText?: string): Promise<AxiosResponse> {
+    public async invokeAlTests(params: TestRunnerInvokeParams, progressDialogText?: string): Promise<AxiosResponse> {
         return await this.invokeGeneric(
             (params: any) => this.axiosInstance.post('/TestRunner/invokeAlTests', params),
+            params,
+            progressDialogText
+        );
+    }
+
+    public async downloadFilesFromRemoteZipParams(params: DownloadFilesFromRemoteZipParams, progressDialogText?: string): Promise<AxiosResponse> {
+        return await this.invokeGeneric(
+            (params: any) => this.axiosInstance.post('/HttpZipStream/downloadFilesFromRemoteZip', params),
             params,
             progressDialogText
         );
@@ -73,6 +81,12 @@ export interface TestRunnerInvokeParams {
     fileName: string;
     selectionStart: string;
     disabledTests?: Map<string, string>
+}
+
+export interface DownloadFilesFromRemoteZipParams {
+    url: string;
+    destinationPath: string;
+    extractionFilter: string;
 }
 
 enum HttpMethod {
