@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NaviPartner.ALTestRunner.Integration;
+using NaviPartner.ALTestRunner.WebApi.Requests;
 
 namespace NaviPartner.ALTestRunner.WebApi.Controllers
 {
@@ -18,9 +19,11 @@ namespace NaviPartner.ALTestRunner.WebApi.Controllers
         public async Task<Array> invokeAlTests([FromBody] InvokeALTestsRequest request)
         {
             TestRunnerIntegration testRunner = new TestRunnerIntegration();
+            
             var results = await testRunner.InvokeALTests(request.alTestRunnerExtPath, request.alProjectPath, request.smbAlExtPath,
                 (TestContext)Enum.Parse(typeof(TestContext), request.tests),
-                new Guid(request.extensionId), request.extensionName, request.fileName, Convert.ToInt32(request.selectionStart));
+                new Guid(request.extensionId), request.extensionName, request.fileName, request.testFunction, request.disabledTests);
+
             return results;
         }
     }

@@ -1,4 +1,4 @@
-﻿namespace NaviPartner.ALTestRunner.WebApi
+﻿namespace NaviPartner.ALTestRunner.WebApi.Requests
 {
     public class InvokeALTestsRequest
     {
@@ -9,6 +9,7 @@
         public string? extensionId { get; set; }
         public string? extensionName { get; set; }
         public string? fileName { get; set; }
-        public string? selectionStart { get; set; }
+        public string? testFunction { get; set; }
+        public Dictionary<string, string>? disabledTests { get; set; }
     }
 }

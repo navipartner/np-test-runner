@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
@@ -23,14 +24,14 @@ namespace NaviPartner.ALTestRunner.Integration
         public TestRunnerIntegration() { }
 
         public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, string tests, string extensionId, string extensionName, string fileName,
-            int selectionStart)
+            string testFunction = "", Dictionary<string, string>? disabledTests = null)
         {
             return await InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, (TestContext)Enum.Parse(typeof(TestContext), tests), new Guid(extensionId), extensionName, fileName,
-                selectionStart);
+                testFunction, disabledTests);
         }
 
         public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, TestContext tests, Guid extensionId, string extensionName, string fileName,
-            int selectionStart)
+            string testFunction = "", Dictionary<string, string>? disabledTests = null)
         {
             Task.WaitAll([
                 GetLaunchConfig(GetLaunchJsonPath(alProjectPath)),
@@ -63,8 +64,20 @@ namespace NaviPartner.ALTestRunner.Integration
                     throw new NotSupportedException($"Credential handling for {DefaultLaunchConfig.EnvironmentType} isn't supported!");
             }
 
+            DisabledTest[]? disabledTestsArray = null;
+            if ((disabledTests != null) && (disabledTests.Count > 0))
+            {
+                disabledTestsArray = disabledTests
+                    .Select(kvp => new DisabledTest
+                    {
+                        CodeunitName = kvp.Key,
+                        Method = kvp.Value
+                    })
+                    .ToArray();
+            }
+
             TestRunner testRunner = new TestRunner(serviceUrl, authScheme, creds, TimeSpan.FromMinutes(30), DefaultALTestRunnerConfig.culture);
-            testRunner.SetupTestRun(extensionId: extensionId.ToString());
+            testRunner.SetupTestRun(extensionId: extensionId.ToString(), testProcedureRange: testFunction, disabledTests: disabledTestsArray);
             var results = testRunner.RunAllTests();
 
             return results;
