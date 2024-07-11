@@ -2,12 +2,13 @@ import * as vscode from 'vscode';
 import * as types from './types';
 import * as path from 'path';
 import * as fetch from 'node-fetch'; 
-import { invokePowerShellCmd, getDocumentWorkspaceFolder, getExtension } from './extension';
+import { isWindowsPlatform, getExtension, testRunnerClient } from './extension';
 import { DOMParser } from 'xmldom';
 import { InvocationResult } from 'node-powershell';
 import * as fs from 'fs';
 import { getALTestRunnerConfigKeyValue } from './config';
 import { version } from 'os';
+import * as webApiClient from './webapiclient';
 
 const cslibFolderName = 'CSLibs';
 
@@ -191,14 +192,19 @@ export function getBcArtifactsUrl(artifactsSource: types.BcArtifactSource, artif
     return null;
 }
 
+export function getLibrariesFolder(version: string): string {
+	const extPath = getExtension().extensionPath
+	const libFolderPath = path.join(extPath, '.npaltestrunner', cslibFolderName, version);
+	return libFolderPath;
+}
+
 /// This function doesn't do a proper check as we don't know how many libraries there might be.
 /// Some BC versions have currently 3 (older versions) and some 4 (newer versions). In the future
 /// the number of those might change or the names of the libraries could be different.
 /// The function is considered as a fast automated check. The user still have a chance to 
 /// (re)download the libraries manually if needed.
-export async function checkAndDownloadMissingDlls(version: string) : Promise<any> {
-	const extPath = getExtension().extensionPath
-	const libFolderPath = path.join(extPath, '.npaltestrunner', cslibFolderName, version);
+export async function checkAndDownloadMissingDlls(version: string) : Promise<any> {	
+	const libFolderPath = getLibrariesFolder(version);
 
 	let someContentExist = false;
 	if (fs.existsSync(libFolderPath)) {
@@ -239,29 +245,48 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 	}
 
 	if (selectedVersion) {
-		let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
-		const versionOnly = selectedVersion.split('/')[0];	
-		let command = `Set-Location '${activeDocumentRootFolderPath}'; Get-ClientSessionLibrariesFromBcArtifacts -BcArtifactSourceUrl ${artifactSourceCdnUrl} -Version ${versionOnly} `;
+		//let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
+		const versionOnly = selectedVersion.split('/')[0];
 
-		const bcv = await vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
-			title: `Downloading client session libraries for BC ${versionOnly}`,
-			cancellable: true
-		}, async (progress, token) => {
-			progress.report({ message: "Working" });
-			
-			const bcv = await invokePowerShellCmd(command).then((result) => {
-				return result;
-			}).catch((error) => {
-				vscode.window.showErrorMessage(`Client session libraries haven't been downloaded. Additional details: ${error}`);
-				throw error;
-			});
-
-			return bcv;
-		});
-
-		return new Promise<any>((resolve) => {
-			resolve(bcv);
-		});
+		const destinationPath = getLibrariesFolder(versionOnly);
+		const downloadParams: webApiClient.DownloadFilesFromRemoteZipParams = {
+			url: `${artifactSourceCdnUrl}${selectedVersion}`,
+			destinationPath: destinationPath,
+			extractionFilter: "(?i)Applications\\\\testframework\\\\TestRunner\\\\Internal\\\\.*\\.dll$"
+		};
+		
+		await testRunnerClient.downloadFilesFromRemoteZipParams(downloadParams, `Downloading Client Session libraries`);
+		if (!isWindowsPlatform()) {
+			restoreDownloadedFileNames(destinationPath);
+		}
 	}
+}
+
+function restoreDownloadedFileNames(folderPath: string): void {
+    try {
+        const files = fs.readdirSync(folderPath);
+        
+        for (const file of files) {
+            const filePath = path.join(folderPath, file);
+            const stats = fs.statSync(filePath);
+            
+            if (stats.isFile()) {
+                const lastBackslashIndex = file.lastIndexOf('\\');
+                if (lastBackslashIndex >= 0) {
+                    const newName = file.slice(lastBackslashIndex + 1);
+                    const newPath = path.join(folderPath, newName);
+                    
+                    // Copy the file with the new name
+                    fs.copyFileSync(filePath, newPath);
+                    
+                    // Delete the original file
+                    fs.unlinkSync(filePath);
+                    
+                    console.log(`Renamed: ${file} -> ${newName}`);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('An error occurred:', error);
+    }
 }
