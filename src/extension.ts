@@ -7,7 +7,7 @@ import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from '.
 import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument } from './alFileHelper';
 import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath, getALTestRunnerConfigKeyValue } from './config';
 import { getOutputWriter, OutputWriter } from './output';
-import { createTestController, deleteTestItemForFilename, discoverTests, discoverTestsInDocument, discoverTestsInFileName } from './testController';
+import { createTestController, deleteTestItemForFilename, discoverTestsInDocument, discoverTestsInFileName, getTestNameFromSelectionStart } from './testController';
 import { onChangeAppFile, publishApp } from './publish';
 import { awaitFileExistence } from './file';
 import { join, resolve } from 'path';
@@ -27,7 +27,8 @@ import * as semver from 'semver';
 import { error } from 'console';
 import { Mutex } from 'async-mutex';
 import * as webApiSrv from './webapiserver';
-
+import * as webApiClient from './webapiclient';
+import * as testResTransform from './testResultTransformer';
 
 let terminal: vscode.Terminal;
 let debugChannel: vscode.OutputChannel;
@@ -36,7 +37,8 @@ var powershellSession = null;
 var powershellSessionReady = false;
 var testRunnerWorkflow = new TestRunnerWorkflow();
 let testRunnerSrv: webApiSrv.TestRunnerWebApiServer = null;
-const pwshCallMutex = new Mutex();
+export let testRunnerClient: webApiClient.TestRunnerWebApiClient = null;
+const runTestCallMutex = new Mutex();
 export let activeEditor = vscode.window.activeTextEditor;
 export let alFiles: types.ALFile[] = [];
 const config = vscode.workspace.getConfiguration('np-al-test-runner');
@@ -148,7 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     enableCheckTestsInActiveDocuments();
 
-	startTestRunnerRpcServerClient(context);
+	startTestRunnerWebApiServerClient(context);
 }
 
 async function enableCheckTestsInActiveDocuments() {
@@ -163,11 +165,38 @@ async function enableCheckTestsInActiveDocuments() {
 }
 
 export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alProjectPath: string, smbAlExtPath: string, tests: string, extensionId: string,
-	extensionName: string, fileName: string, selectionStart: number): Promise<types.ALTestAssembly[]> {
+	extensionName: string, fileName: string, selectionStart: number, disabledTests?: Map<string, string>): Promise<testResTransform.TestRun[]> {
 	
-		throw new Error('TODO: Implement HTTP call to start tests.')
-		//return await rpcClient.InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, tests, extensionId, extensionName, 
-		//fileName, selectionStart);
+	sendDebugEvent('invokeTestRunner-start');
+	const config = getCurrentWorkspaceConfig();
+	getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
+	let publishType: types.PublishType = types.PublishType.None;
+
+	await checkMissingButConfiguredClientSessionLibsAndDownload();
+
+	const testParams: webApiClient.TestRunnerInvokeParams = {
+		alTestRunnerExtPath: alTestRunnerExtPath,
+		alProjectPath: alProjectPath,
+		smbAlExtPath: smbAlExtPath,
+		tests: tests,
+		extensionId: extensionId,
+		extensionName: extensionName,
+		fileName: fileName,
+		testFunction: await getTestNameFromSelectionStart(fileName, selectionStart),
+		disabledTests: disabledTests
+	};
+
+	const release = await runTestCallMutex.acquire();
+
+	try {
+		const response = await testRunnerClient.invokeAlTests(testParams, `Running AL tests`);
+		triggerUpdateDecorations();
+		return response.data;
+	} catch (error) {
+		vscode.window.showErrorMessage(`Error invoking tests: ${error}`);
+	} finally {
+		release();
+	}
 }
 
 export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {
@@ -343,7 +372,7 @@ export async function invokePowerShellCmd(command: string) : Promise<any> {
 		})
 	}
 
-	const release = await pwshCallMutex.acquire();
+	const release = await runTestCallMutex.acquire();
 	
 	try {
 		if (powershellSession === null) {
@@ -862,11 +891,18 @@ function showMissingPrerequisiteErrorMessage(message: string, link: string) {
     });
 }
 
-async function startTestRunnerRpcServerClient(context: vscode.ExtensionContext) {
+async function startTestRunnerWebApiServerClient(context: vscode.ExtensionContext) {
 	if ((testRunnerSrv) && (testRunnerSrv.IsRunning)) {
 		return;
 	}
 
 	testRunnerSrv = new webApiSrv.TestRunnerWebApiServer();
-	testRunnerSrv.startServer(context);
+	await testRunnerSrv.startServer(context);
+
+	testRunnerClient = new webApiClient.TestRunnerWebApiClient();
+	await testRunnerClient.Connect(testRunnerSrv.port);
+}
+
+export function isWindowsPlatform(): boolean {
+    return (process.platform === 'win32');
 }

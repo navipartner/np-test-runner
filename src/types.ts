@@ -106,11 +106,6 @@ export type ALMethod = {
 	path?: string;
 }
 
-export type DisabledTest = {
-	codeunitName: string;
-	method: string;
-}
-
 export type TestCoverage = {
 	method: ALMethod;
 	testMethod: ALMethod;

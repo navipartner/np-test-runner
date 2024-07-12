@@ -79,7 +79,7 @@ export interface TestRunnerInvokeParams {
     extensionId: string;
     extensionName: string;
     fileName: string;
-    selectionStart: string;
+    testFunction: string;
     disabledTests?: Map<string, string>
 }
 
