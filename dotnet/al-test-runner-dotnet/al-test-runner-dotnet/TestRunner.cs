@@ -52,10 +52,10 @@ namespace NaviPartner.ALTestRunner
             string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[]? disabledTests = null, bool stabilityRun = false)
         {
             TestPage = testPage;
-            TestSuite = testSuite; ;
+            TestSuite = testSuite;
 
-            OpenTestForm(testPage);
-            SetTestSuite(OpenedForm, testSuite);
+            OpenTestForm(TestPage);
+            SetTestSuite(OpenedForm, TestSuite);
             SetExtensionId(OpenedForm, extensionId);
             SetTestCodeunits(OpenedForm, testCodeunitsRange);
             SetTestProcedures(OpenedForm, testProcedureRange);
@@ -63,7 +63,7 @@ namespace NaviPartner.ALTestRunner
             SetRunFalseOnDisabledTests(OpenedForm, disabledTests);
             SetStabilityRun(OpenedForm, stabilityRun);
             ClearTestResults(OpenedForm);
-            
+
             // TODO: Codecoverage settings if enabled!
 
             //CloseForm(form);

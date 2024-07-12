@@ -11,8 +11,8 @@ namespace NaviPartner.ALTestRunner
     {
         protected ClientSession ClientSession { get; private set; }
         protected string Culture { get; private set; }
-        protected ClientLogicalForm OpenedForm { get; private set; }
-        protected string OpenedFormName { get; private set; }
+        protected ClientLogicalForm? OpenedForm { get; private set; } = null;
+        protected string OpenedFormName { get; private set; } = "";
         private ClientLogicalForm PsTestRunnerCaughtForm;
         
         public ClientContext(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
@@ -152,6 +152,9 @@ namespace NaviPartner.ALTestRunner
         public void CloseForm(ClientLogicalForm form)
         {
             this.InvokeInteraction(new CloseFormInteraction(form));
+
+            OpenedForm = null;
+            OpenedFormName = "";
         }
 
         public ClientLogicalForm[] GetAllForms()
@@ -200,6 +203,9 @@ namespace NaviPartner.ALTestRunner
             {
                 this.CloseForm(form);
             }
+
+            OpenedForm = null;
+            OpenedFormName = "";
         }
 
         public void CloseAllErrorForms()
