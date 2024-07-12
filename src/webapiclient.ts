@@ -78,8 +78,8 @@ export interface TestRunnerInvokeParams {
     tests: string;
     extensionId: string;
     extensionName: string;
-    fileName: string;
-    testFunction: string;
+    testCodeunitsRange: string;
+    testProcedureRange: string;
     disabledTests?: Map<string, string>
 }
 

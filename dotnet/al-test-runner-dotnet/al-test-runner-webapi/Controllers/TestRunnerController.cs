@@ -19,12 +19,20 @@ namespace NaviPartner.ALTestRunner.WebApi.Controllers
         public async Task<Array> invokeAlTests([FromBody] InvokeALTestsRequest request)
         {
             TestRunnerIntegration testRunner = new TestRunnerIntegration();
-            
-            var results = await testRunner.InvokeALTests(request.alTestRunnerExtPath, request.alProjectPath, request.smbAlExtPath,
-                (TestContext)Enum.Parse(typeof(TestContext), request.tests),
-                new Guid(request.extensionId), request.extensionName, request.fileName, request.testFunction, request.disabledTests);
 
-            return results;
+            try
+            {
+                var results = await testRunner.InvokeALTests(request.alTestRunnerExtPath, request.alProjectPath, request.smbAlExtPath,
+                    (TestContext)Enum.Parse(typeof(TestContext), request.tests),
+                    (!string.IsNullOrEmpty(request.extensionId)) ? new Guid(request.extensionId) : Guid.Empty, request.extensionName,
+                    request.testCodeunitsRange, request.testProcedureRange, request.disabledTests);
+
+                return results;
+            } 
+            catch (Exception ex)
+            {
+                throw new Exception($"Error during invocation of test runner: {ex.Message}", ex.InnerException);
+            }
         }
     }
 }

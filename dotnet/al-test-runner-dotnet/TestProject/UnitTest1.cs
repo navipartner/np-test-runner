@@ -42,7 +42,7 @@ namespace TestProject
                 @"C:\Users\JakubVanak\Documents\AL\01\",
                 @"C:\Users\JakubVanak\.vscode\extensions\ms-dynamics-smb.al-13.1.1065068\", "Test", 
                 "147e6578-22ea-4f84-a6d8-10ce11ad0b04", "01", 
-                @"C:\Users\JakubVanak\Documents\AL\01\tests.al", "TestMethod01");
+                "50101", "TestMethod01");
             Console.WriteLine(result);
         }
 
@@ -54,8 +54,28 @@ namespace TestProject
                 @"C:\Users\JakubVanak\Documents\AL\01\",
                 @"C:\Users\JakubVanak\.vscode\extensions\ms-dynamics-smb.al-13.1.1065068\", "Test",
                 "147e6578-22ea-4f84-a6d8-10ce11ad0b04", "01",
-                @"C:\Users\JakubVanak\Documents\AL\01\tests.al", "");
+                "50101", "");
             Console.WriteLine(result);
+        }
+
+        [Fact]
+        public async void InvokeALTests_Repeat_IsolatedTest()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                TestRunnerIntegration testRunner = new TestRunnerIntegration();
+                var result = await testRunner.InvokeALTests(@"C:\Users\JakubVanak\Documents\Repos\NaviPartner\np-al-test-runner-fork\",
+                    @"C:\Users\JakubVanak\Documents\AL\01\",
+                    @"C:\Users\JakubVanak\.vscode\extensions\ms-dynamics-smb.al-13.1.1065068\", "Test",
+                    "147e6578-22ea-4f84-a6d8-10ce11ad0b04", "01",
+                    "50101", "TestMethod01");
+                Console.WriteLine(result);
+
+                if ((result == null) || (result.Length == 0))
+                {
+                    throw new Exception($"The result is empty for run no. {i+1}");
+                }
+            }
         }
     }
 }

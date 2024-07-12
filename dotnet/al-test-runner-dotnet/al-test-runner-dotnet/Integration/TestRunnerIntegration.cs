@@ -17,51 +17,57 @@ namespace NaviPartner.ALTestRunner.Integration
 {
     public class TestRunnerIntegration
     {
+        protected static TestRunner DefaultTestRunner { get; private set; } = null;
         protected LaunchConfigurations DefaultLaunchConfigs { get; private set; } = new LaunchConfigurations();
         protected LaunchConfiguration DefaultLaunchConfig { get; private set; } = new LaunchConfiguration();
         protected ALTestRunnerConfig DefaultALTestRunnerConfig { get; private set; } = new ALTestRunnerConfig();
 
         public TestRunnerIntegration() { }
 
-        public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, string tests, string extensionId, string extensionName, string fileName,
-            string testFunction = "", Dictionary<string, string>? disabledTests = null)
+        public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, string tests, string extensionId, 
+            string extensionName, string testCodeunitsRange = "", string testProcedureRange = "", Dictionary<string, string>? disabledTests = null)
         {
-            return await InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, (TestContext)Enum.Parse(typeof(TestContext), tests), new Guid(extensionId), extensionName, fileName,
-                testFunction, disabledTests);
+            return await InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, (TestContext)Enum.Parse(typeof(TestContext), tests), new Guid(extensionId), 
+                extensionName, testCodeunitsRange, testProcedureRange, disabledTests);
         }
 
-        public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, TestContext tests, Guid extensionId, string extensionName, string fileName,
-            string testFunction = "", Dictionary<string, string>? disabledTests = null)
+        public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, TestContext tests, Guid extensionId, 
+            string? extensionName, string? testCodeunitsRange = "", string? testProcedureRange = "", Dictionary<string, string>? disabledTests = null)
         {
-            Task.WaitAll([
+            if (DefaultTestRunner == null)
+            {
+                Task.WaitAll([
                 GetLaunchConfig(GetLaunchJsonPath(alProjectPath)),
                 GetALTestRunnerConfig(GetALTestRunnerConfigPath(alProjectPath))
                 ]);
-            
-            var serviceUrl = await GetServiceUrl(DefaultLaunchConfig);
-            var bcVersion = DefaultALTestRunnerConfig.selectedBcVersion;
-            var bcVersionLibsPath = Path.Combine(alTestRunnerExtPath, ".npaltestrunner", "CSLibs", bcVersion);
-            if (!(await IsServiceIsRunningAndHealthy(DefaultLaunchConfig)))
-            {
-                throw new Exception($"{serviceUrl} is not available. Please start the container, or check NST, eventually retry.");
-            }
 
-            NetworkCredential? creds = null;
-            BCAuthScheme authScheme = BCAuthScheme.UserNamePassword;
+                var serviceUrl = await GetServiceUrl(DefaultLaunchConfig);
+                var bcVersion = DefaultALTestRunnerConfig.selectedBcVersion;
+                var bcVersionLibsPath = Path.Combine(alTestRunnerExtPath, ".npaltestrunner", "CSLibs", bcVersion);
+                if (!(await IsServiceIsRunningAndHealthy(DefaultLaunchConfig)))
+                {
+                    throw new Exception($"{serviceUrl} is not available. Please start the container, or check NST, eventually retry.");
+                }
 
-            AssemblyResolver.SetupAssemblyResolve("Microsoft.Dynamics.Framework.UI.Client", bcVersionLibsPath);
+                NetworkCredential? creds = null;
+                BCAuthScheme authScheme = BCAuthScheme.UserNamePassword;
 
-            switch (DefaultLaunchConfig.EnvironmentType)
-            {
-                case EnvironmentType.OnPrem:
-                    var serviceUrlCredCacheKey = GetServiceUrlCredentialCacheKey(DefaultLaunchConfig).ToLower();
-                    creds = GetNavUserPasswordCredentials(smbAlExtPath, serviceUrlCredCacheKey);
-                    authScheme = BCAuthScheme.UserNamePassword;
-                    break;
-                case EnvironmentType.Sandbox:
-                    throw new NotImplementedException("Credential handling for Sandbox has to be yet implemented!");
-                default:
-                    throw new NotSupportedException($"Credential handling for {DefaultLaunchConfig.EnvironmentType} isn't supported!");
+                AssemblyResolver.SetupAssemblyResolve("Microsoft.Dynamics.Framework.UI.Client", bcVersionLibsPath);
+
+                switch (DefaultLaunchConfig.EnvironmentType)
+                {
+                    case EnvironmentType.OnPrem:
+                        var serviceUrlCredCacheKey = GetServiceUrlCredentialCacheKey(DefaultLaunchConfig).ToLower();
+                        creds = GetNavUserPasswordCredentials(smbAlExtPath, serviceUrlCredCacheKey);
+                        authScheme = BCAuthScheme.UserNamePassword;
+                        break;
+                    case EnvironmentType.Sandbox:
+                        throw new NotImplementedException("Credential handling for Sandbox has to be yet implemented!");
+                    default:
+                        throw new NotSupportedException($"Credential handling for {DefaultLaunchConfig.EnvironmentType} isn't supported!");
+                }
+
+                DefaultTestRunner = new TestRunner(serviceUrl, authScheme, creds, TimeSpan.FromMinutes(30), DefaultALTestRunnerConfig.culture);
             }
 
             DisabledTest[]? disabledTestsArray = null;
@@ -76,9 +82,13 @@ namespace NaviPartner.ALTestRunner.Integration
                     .ToArray();
             }
 
-            TestRunner testRunner = new TestRunner(serviceUrl, authScheme, creds, TimeSpan.FromMinutes(30), DefaultALTestRunnerConfig.culture);
-            testRunner.SetupTestRun(extensionId: extensionId.ToString(), testProcedureRange: testFunction, disabledTests: disabledTestsArray);
-            var results = testRunner.RunAllTests();
+
+            DefaultTestRunner.SetupTestRun(extensionId: extensionId.ToString(), testCodeunitsRange: testCodeunitsRange, 
+                testProcedureRange: testProcedureRange, disabledTests: disabledTestsArray);
+            
+            var results = DefaultTestRunner.RunAllTests();
+
+            //DefaultTestRunner.CloseAllForms();
 
             return results;
         }

@@ -4,7 +4,7 @@ import * as xml2js from 'xml2js';
 import * as types from './types';
 import { CodelensProvider } from './codelensProvider';
 import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from './coverage';
-import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument } from './alFileHelper';
+import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument, getALObjectOfDocument } from './alFileHelper';
 import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath, getALTestRunnerConfigKeyValue } from './config';
 import { getOutputWriter, OutputWriter } from './output';
 import { createTestController, deleteTestItemForFilename, discoverTestsInDocument, discoverTestsInFileName, getTestNameFromSelectionStart } from './testController';
@@ -174,6 +174,15 @@ export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alPro
 
 	await checkMissingButConfiguredClientSessionLibsAndDownload();
 
+	let objectId = ""
+	if ((fileName != null) && (fileName != '')) {
+		const alDoc = await vscode.workspace.openTextDocument(fileName);
+		const alObj = getALObjectOfDocument(alDoc);
+		objectId = alObj.id.toString();
+	}
+
+	const procName = await getTestNameFromSelectionStart(fileName, selectionStart);
+
 	const testParams: webApiClient.TestRunnerInvokeParams = {
 		alTestRunnerExtPath: alTestRunnerExtPath,
 		alProjectPath: alProjectPath,
@@ -181,8 +190,8 @@ export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alPro
 		tests: tests,
 		extensionId: extensionId,
 		extensionName: extensionName,
-		fileName: fileName,
-		testFunction: await getTestNameFromSelectionStart(fileName, selectionStart),
+		testCodeunitsRange: objectId,
+		testProcedureRange: procName,
 		disabledTests: disabledTests
 	};
 

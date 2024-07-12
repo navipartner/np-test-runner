@@ -49,9 +49,9 @@ namespace NaviPartner.ALTestRunner
         }
 
         public void SetupTestRun(int testPage = DefaultTestPage, string testSuite = DefaultTestSuite, string extensionId = "", string testCodeunitsRange = "",
-            string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[] disabledTests = null, bool stabilityRun = false)
+            string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[]? disabledTests = null, bool stabilityRun = false)
         {
-            TestPage = TestPage;
+            TestPage = testPage;
             TestSuite = testSuite; ;
 
             OpenTestForm(testPage);

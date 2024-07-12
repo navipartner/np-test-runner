@@ -241,7 +241,7 @@ export async function runTest(filename?: string, selectionStart?: number, extens
                 const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "Test", 
                     extensionId, extensionName, filename, selectionStart);
 
-                    const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
+                const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
                 resolve(results);
             }
             else {

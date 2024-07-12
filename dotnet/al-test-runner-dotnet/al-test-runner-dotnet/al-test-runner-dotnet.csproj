@@ -18,9 +18,4 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Condition="'$(IsWindows)' == 'true'" Command="xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\..\PowerShell\Libs\\&quot; /Y" />
-    <Exec Condition="'$(IsWindows)' == 'false'" Command="cp &quot;$(TargetPath)&quot; &quot;$(SolutionDir)../../PowerShell/Libs/&quot;" />
-  </Target>
 </Project>
