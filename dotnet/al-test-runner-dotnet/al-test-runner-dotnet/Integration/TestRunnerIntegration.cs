@@ -17,6 +17,7 @@ namespace NaviPartner.ALTestRunner.Integration
 {
     public class TestRunnerIntegration
     {
+        protected static bool CreatingTestRunnerInstance { get; private set; }
         protected static TestRunner DefaultTestRunner { get; private set; } = null;
         protected LaunchConfigurations DefaultLaunchConfigs { get; private set; } = new LaunchConfigurations();
         protected LaunchConfiguration DefaultLaunchConfig { get; private set; } = new LaunchConfiguration();
@@ -34,63 +35,115 @@ namespace NaviPartner.ALTestRunner.Integration
         public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, TestContext tests, Guid extensionId, 
             string? extensionName, string? testCodeunitsRange = "", string? testProcedureRange = "", Dictionary<string, string>? disabledTests = null)
         {
-            if (DefaultTestRunner == null)
+            bool recreateClient = false;
+
+            try
             {
-                Task.WaitAll([
-                GetLaunchConfig(GetLaunchJsonPath(alProjectPath)),
-                GetALTestRunnerConfig(GetALTestRunnerConfigPath(alProjectPath))
-                ]);
-
-                var serviceUrl = await GetServiceUrl(DefaultLaunchConfig);
-                var bcVersion = DefaultALTestRunnerConfig.selectedBcVersion;
-                var bcVersionLibsPath = Path.Combine(alTestRunnerExtPath, ".npaltestrunner", "CSLibs", bcVersion);
-                if (!(await IsServiceIsRunningAndHealthy(DefaultLaunchConfig)))
+                if (DefaultTestRunner == null)
                 {
-                    throw new Exception($"{serviceUrl} is not available. Please start the container, or check NST, eventually retry.");
-                }
-
-                NetworkCredential? creds = null;
-                BCAuthScheme authScheme = BCAuthScheme.UserNamePassword;
-
-                AssemblyResolver.SetupAssemblyResolve("Microsoft.Dynamics.Framework.UI.Client", bcVersionLibsPath);
-
-                switch (DefaultLaunchConfig.EnvironmentType)
-                {
-                    case EnvironmentType.OnPrem:
-                        var serviceUrlCredCacheKey = GetServiceUrlCredentialCacheKey(DefaultLaunchConfig).ToLower();
-                        creds = GetNavUserPasswordCredentials(smbAlExtPath, serviceUrlCredCacheKey);
-                        authScheme = BCAuthScheme.UserNamePassword;
-                        break;
-                    case EnvironmentType.Sandbox:
-                        throw new NotImplementedException("Credential handling for Sandbox has to be yet implemented!");
-                    default:
-                        throw new NotSupportedException($"Credential handling for {DefaultLaunchConfig.EnvironmentType} isn't supported!");
-                }
-
-                DefaultTestRunner = new TestRunner(serviceUrl, authScheme, creds, TimeSpan.FromMinutes(30), DefaultALTestRunnerConfig.culture);
-            }
-
-            DisabledTest[]? disabledTestsArray = null;
-            if ((disabledTests != null) && (disabledTests.Count > 0))
-            {
-                disabledTestsArray = disabledTests
-                    .Select(kvp => new DisabledTest
+                    while (CreatingTestRunnerInstance)
                     {
-                        CodeunitName = kvp.Key,
-                        Method = kvp.Value
-                    })
-                    .ToArray();
+                        Thread.Sleep(100);
+                    }
+
+                    if (DefaultTestRunner == null)
+                    {
+                        await CreateTestRunnerInstance(alTestRunnerExtPath, alProjectPath, smbAlExtPath);
+                    }
+                }
+
+                DisabledTest[]? disabledTestsArray = null;
+                if ((disabledTests != null) && (disabledTests.Count > 0))
+                {
+                    disabledTestsArray = disabledTests
+                        .Select(kvp => new DisabledTest
+                        {
+                            CodeunitName = kvp.Key,
+                            Method = kvp.Value
+                        })
+                        .ToArray();
+                }
+
+
+                DefaultTestRunner.SetupTestRun(extensionId: extensionId.ToString(), testCodeunitsRange: testCodeunitsRange,
+                    testProcedureRange: testProcedureRange, disabledTests: disabledTestsArray);
+
+                var results = DefaultTestRunner.RunAllTests();
+                recreateClient = true;
+
+                return results;
             }
+            catch
+            {
+                recreateClient = false;
+                throw;
+            }
+            finally
+            {
+                DefaultTestRunner.CloseOpenedForm();
+                DefaultTestRunner.CloseSession();
+                DefaultTestRunner.Dispose();
+                DefaultTestRunner = null;
 
+                if (recreateClient)
+                {
+                    Task.Run(() => CreateTestRunnerInstance(alTestRunnerExtPath, alProjectPath, smbAlExtPath));
+                }
+            }
+        }
 
-            DefaultTestRunner.SetupTestRun(extensionId: extensionId.ToString(), testCodeunitsRange: testCodeunitsRange, 
-                testProcedureRange: testProcedureRange, disabledTests: disabledTestsArray);
-            
-            var results = DefaultTestRunner.RunAllTests();
+        private async Task<TestRunner> CreateTestRunnerInstance(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath)
+        {
+            try
+            {
+                CreatingTestRunnerInstance = true;
 
-            //DefaultTestRunner.CloseAllForms();
+                if (DefaultTestRunner == null)
+                {
+                    Task.WaitAll([
+                    GetLaunchConfig(GetLaunchJsonPath(alProjectPath)),
+                        GetALTestRunnerConfig(GetALTestRunnerConfigPath(alProjectPath))
+                    ]);
 
-            return results;
+                    var serviceUrl = await GetServiceUrl(DefaultLaunchConfig);
+                    var bcVersion = DefaultALTestRunnerConfig.selectedBcVersion;
+                    var bcVersionLibsPath = Path.Combine(alTestRunnerExtPath, ".npaltestrunner", "CSLibs", bcVersion);
+                    if (!(await IsServiceIsRunningAndHealthy(DefaultLaunchConfig)))
+                    {
+                        throw new Exception($"{serviceUrl} is not available. Please start the container, or check NST, eventually retry.");
+                    }
+
+                    NetworkCredential? creds = null;
+                    BCAuthScheme authScheme = BCAuthScheme.UserNamePassword;
+
+                    AssemblyResolver.SetupAssemblyResolve("Microsoft.Dynamics.Framework.UI.Client", bcVersionLibsPath);
+
+                    switch (DefaultLaunchConfig.EnvironmentType)
+                    {
+                        case EnvironmentType.OnPrem:
+                            var serviceUrlCredCacheKey = GetServiceUrlCredentialCacheKey(DefaultLaunchConfig).ToLower();
+                            creds = GetNavUserPasswordCredentials(smbAlExtPath, serviceUrlCredCacheKey);
+                            authScheme = BCAuthScheme.UserNamePassword;
+                            break;
+                        case EnvironmentType.Sandbox:
+                            throw new NotImplementedException("Credential handling for Sandbox has to be yet implemented!");
+                        default:
+                            throw new NotSupportedException($"Credential handling for {DefaultLaunchConfig.EnvironmentType} isn't supported!");
+                    }
+
+                    DefaultTestRunner = new TestRunner(serviceUrl, authScheme, creds, TimeSpan.FromMinutes(30), DefaultALTestRunnerConfig.culture);
+                }
+
+                return DefaultTestRunner;
+            } catch
+            {
+                DefaultTestRunner = null;
+                throw;
+            }
+            finally
+            {
+                CreatingTestRunnerInstance = false;
+            }
         }
 
         private NetworkCredential GetNavUserPasswordCredentials(string smbAlExtPath, string webClientUrl)
