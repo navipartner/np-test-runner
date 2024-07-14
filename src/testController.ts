@@ -1,14 +1,18 @@
 import * as vscode from 'vscode';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getALObjectFromPath, getALObjectOfDocument, getFilePathOfObject, getTestMethodRangesFromDocument } from './alFileHelper';
 import { getALTestRunnerConfig, getCurrentWorkspaceConfig, getLaunchConfiguration, launchConfigIsValid, selectLaunchConfig, setALTestRunnerConfig, getALTestRunnerConfigKeyValue } from './config';
-import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, invokeTestRunner, outputWriter, getLastResultPath, getSmbAlExtensionPath } from './extension';
-import { ALTestAssembly, ALTestResult, ALMethod, DisabledTest, ALFile, launchConfigValidity, CodeCoverageDisplay } from './types';
+import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, outputWriter, getLastResultPath, getSmbAlExtensionPath, 
+    invokeTestRunnerViaHttp, getExtension, getDocumentWorkspaceFolder } from './extension';
+import { ALTestResult, ALMethod, ALFile, launchConfigValidity, CodeCoverageDisplay } from './types';
 import * as path from 'path';
 import { sendDebugEvent, sendTestDebugStartEvent, sendTestRunFinishedEvent, sendTestRunStartEvent } from './telemetry';
 import { buildTestCoverageFromTestItem } from './testCoverage';
 import { getALFilesInCoverage, getFileCoverage, getStatementCoverage, readCodeCoverage, saveAllTestsCodeCoverage, saveTestRunCoverage } from './coverage';
 import { readyToDebug } from './debug';
 import { selectBcVersionIfNotSelected } from './clientContextDllHelper';
+import * as readline from 'readline';
+import * as fs from 'fs';
+import * as testResTransform from './testResultTransformer';
 
 export let numberOfTests: number;
 
@@ -112,7 +116,7 @@ export async function runTestHandler(request: vscode.TestRunRequest) {
     const run = alTestController.createTestRun(request, timestamp);
     sendTestRunStartEvent(request);
 
-    let results: ALTestAssembly[];
+    let results: testResTransform.XUnitAssembly[];
     if (request.include === undefined) {
         results = await runAllTests();
         saveAllTestsCodeCoverage();
@@ -153,8 +157,8 @@ export async function runTestHandler(request: vscode.TestRunRequest) {
     }
 }
 
-function setResultsForTestItems(results: ALTestAssembly[], request: vscode.TestRunRequest, run: vscode.TestRun) {
-    if (results.length == 0) {
+function setResultsForTestItems(results: testResTransform.XUnitAssembly[], request: vscode.TestRunRequest, run: vscode.TestRun) {
+    if ((results == null) || (results.length == 0)) {
         return;
     }
 
@@ -209,7 +213,7 @@ export function readyToRunTests(): Promise<Boolean> {
     });
 }
 
-export async function runTest(filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string): Promise<ALTestAssembly[]> {
+export async function runTest(filename?: string, selectionStart?: number, extensionId?: string, extensionName?: string): Promise<testResTransform.XUnitAssembly[]> {
     sendDebugEvent('runTest-start', { filename: filename ? filename : 'undefined', selectionStart: selectionStart ? selectionStart.toString() : '0', extensionId: extensionId ? extensionId : 'undefined', extensionName: extensionName ? extensionName : 'undefined'});
     return new Promise(async (resolve) => {
         await readyToRunTests().then(async ready => {
@@ -232,7 +236,12 @@ export async function runTest(filename?: string, selectionStart?: number, extens
 
                 sendDebugEvent('runTest-ready', { filename: filename, selectionStart: selectionStart.toString(), extensionId: extensionId!, extensionName: extensionName! });
                 
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests Test -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -FileName "${filename}" -SelectionStart ${selectionStart} -ResultsFilePath ${resultsFilePath}`);
+                const alProjectFolderPath = await getDocumentWorkspaceFolder();
+                
+                const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "Test", 
+                    extensionId, extensionName, filename, selectionStart);
+
+                const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
                 resolve(results);
             }
             else {
@@ -242,7 +251,7 @@ export async function runTest(filename?: string, selectionStart?: number, extens
     });
 };
 
-export async function runAllTests(extensionId?: string, extensionName?: string): Promise<ALTestAssembly[]> {
+export async function runAllTests(extensionId?: string, extensionName?: string): Promise<testResTransform.XUnitAssembly[]> {
     return new Promise(async (resolve) => {
         await readyToRunTests().then(async ready => {
             if (ready) {
@@ -258,8 +267,11 @@ export async function runAllTests(extensionId?: string, extensionName?: string):
                 }
 
                 sendDebugEvent('runAllTests-ready');
-
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -ResultsFilePath ${resultsFilePath}`);
+                
+                const alProjectFolderPath = await getDocumentWorkspaceFolder();
+                const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "All", extensionId, extensionName, "", 0);
+                
+                const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
                 resolve(results);
             }
             else {
@@ -269,7 +281,7 @@ export async function runAllTests(extensionId?: string, extensionName?: string):
     });
 }
 
-export async function runSelectedTests(request: vscode.TestRunRequest, extensionId?: string, extensionName?: string): Promise<ALTestAssembly[]> {
+export async function runSelectedTests(request: vscode.TestRunRequest, extensionId?: string, extensionName?: string): Promise<testResTransform.XUnitAssembly[]> {
     return new Promise(async (resolve) => {
         await readyToRunTests().then(async ready => {
             if (ready) {
@@ -287,9 +299,11 @@ export async function runSelectedTests(request: vscode.TestRunRequest, extension
                 sendDebugEvent('runSelectedTests-ready');
 
                 const disabledTests = getDisabledTestsForRequest(request);
-                const disabledTestsJson = JSON.stringify(disabledTests);
-
-                const results: ALTestAssembly[] = await invokeTestRunner(`Invoke-NPALTests -SmbAlExtPath "${smbAlExtPath}" -Tests All -ExtensionId "${extensionId}" -ExtensionName "${extensionName}" -DisabledTests ('${disabledTestsJson}'  -ResultsFilePath ${resultsFilePath} | ConvertFrom-Json)`);
+                
+                const alProjectFolderPath = await getDocumentWorkspaceFolder();
+                const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "All", extensionId, extensionName, "", 0, disabledTests);
+                
+                const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
                 resolve(results);
             }
             else {
@@ -340,7 +354,7 @@ export async function debugTest(filename: string, selectionStart: number) {
     invokeDebugTest(filename, selectionStart);
 }
 
-function setResultForTestItem(result: ALTestResult, testItem: vscode.TestItem, run: vscode.TestRun) {
+function setResultForTestItem(result: testResTransform.XUnitTest, testItem: vscode.TestItem, run: vscode.TestRun) {
     if (result.$.result == 'Pass') {
         run.passed(testItem);
     }
@@ -349,9 +363,9 @@ function setResultForTestItem(result: ALTestResult, testItem: vscode.TestItem, r
     }
 }
 
-function getResultForTestItem(results: ALTestAssembly[], testItem: vscode.TestItem, parent: vscode.TestItem): ALTestResult {
-    const assemblyName = parent.label.substring(1, parent.label.length - 1);
-    let returnResult: ALTestResult = { $: { method: testItem.label, name: testItem.label, result: 'none', time: '0' }, failure: [{ message: '', 'stack-trace': '' }] };;
+function getResultForTestItem(results: testResTransform.XUnitAssembly[], testItem: vscode.TestItem, parent: vscode.TestItem): testResTransform.XUnitTest {
+    const assemblyName = parent.label;
+    let returnResult: testResTransform.XUnitTest = { $: { method: testItem.label, name: testItem.label, result: 'none', time: '0' }, failure: [{ message: '', 'stack-trace': '' }] };;
     results.forEach(assembly => {
         if (assembly.$.name.includes(assemblyName)) {
             assembly.collection.forEach(collection => {
@@ -418,8 +432,8 @@ export async function deleteTestItemForFilename(filename: string) {
     }
 }
 
-export function getDisabledTestsForRequest(request: vscode.TestRunRequest, testContoller?: vscode.TestController): DisabledTest[] {
-    let disabledTests: DisabledTest[] = [];
+export function getDisabledTestsForRequest(request: vscode.TestRunRequest, testContoller?: vscode.TestController): Map<string, string> {
+    let disabledTests: Map<string, string> = new Map();
     let testCodeunitsToRun: vscode.TestItem[] = getTestCodeunitsIncludedInRequest(request);
     let controller;
     if (testContoller) {
@@ -443,7 +457,7 @@ export function getDisabledTestsForRequest(request: vscode.TestRunRequest, testC
         if (request.include?.indexOf(testCodeunit) == -1) {
             testCodeunit.children.forEach(testItem => {
                 if (request.include?.indexOf(testItem) == -1) {
-                    disabledTests.push({ codeunitName: testCodeunit.label, method: testItem.label });
+                    disabledTests.set(testCodeunit.label, testItem.label);
                 }
             });
         }
@@ -452,7 +466,7 @@ export function getDisabledTestsForRequest(request: vscode.TestRunRequest, testC
     //test codeunits where none of their tests are included
     controller.items.forEach(testCodeunit => {
         if (testCodeunitsToRun.indexOf(testCodeunit) == -1) {
-            disabledTests.push({ codeunitName: testCodeunit.label, method: '*' })
+            disabledTests.set(testCodeunit.label, '*');
         }
     });
 
@@ -515,7 +529,7 @@ export function getTestItemForMethod(method: ALMethod): vscode.TestItem | undefi
     }
 }
 
-async function outputTestResults(assemblies: ALTestAssembly[]): Promise<Boolean> {
+async function outputTestResults(assemblies: testResTransform.XUnitAssembly[]): Promise<Boolean> {
 	return new Promise(async (resolve) => {
 		let noOfTests: number = 0;
 		let noOfFailures: number = 0;
@@ -604,4 +618,46 @@ async function outputTestResults(assemblies: ALTestAssembly[]): Promise<Boolean>
 		outputWriter.show();
 		resolve(true);
 	});
+}
+
+export async function getTestNameFromSelectionStart(path: string, selectionStart: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+        if ((path == null) || (path == "") || (selectionStart == 0)) {
+            resolve('');
+            return;
+        }
+
+        const readStream = fs.createReadStream(path);
+        const rl = readline.createInterface({
+            input: readStream,
+            crlfDelay: Infinity
+        });
+
+        const lines: string[] = [];
+        rl.on('line', (line) => {
+            lines.push(line);
+        });
+
+        rl.on('close', () => {
+            for (let i = selectionStart - 1; i >= 0; i--) {
+                if (lines[i].toUpperCase().includes('[TEST]')) {
+                    // search forwards for the procedure declaration (it might not be the following line)
+                    for (let j = i; j < lines.length; j++) {
+                        if (lines[j].includes('procedure')) {
+                            let procDeclaration = lines[j];
+                            procDeclaration = procDeclaration.substring(procDeclaration.indexOf('procedure') + 10);
+                            procDeclaration = procDeclaration.substring(0, procDeclaration.indexOf('('));
+                            resolve(procDeclaration.trim());
+                            return;
+                        }
+                    }
+                }
+            }
+            resolve('');
+        });
+
+        rl.on('error', (err) => {
+            reject(err);
+        });
+    });
 }

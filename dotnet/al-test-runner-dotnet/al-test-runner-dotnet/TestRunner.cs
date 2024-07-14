@@ -9,6 +9,7 @@ using Newtonsoft.Json.Converters;
 using Microsoft.Dynamics.Framework.UI.Client;
 using Newtonsoft.Json;
 using System.Collections;
+using NaviPartner.ALTestRunner.Integration;
 
 namespace NaviPartner.ALTestRunner
 {
@@ -42,14 +43,19 @@ namespace NaviPartner.ALTestRunner
         {
         }
 
-        public void SetupTestRun(int testPage = DefaultTestPage, string testSuite = DefaultTestSuite, string extensionId = "", string testCodeunitsRange = "",
-            string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[] disabledTests = null, bool stabilityRun = false)
+        public TestRunner(string serviceUrl, BCAuthScheme authenticationScheme, ICredentials credential,
+            TimeSpan interactionTimeout, string culture) : base(serviceUrl, authenticationScheme.ToString(), credential, interactionTimeout, culture)
         {
-            TestPage = TestPage;
-            TestSuite = testSuite; ;
+        }
 
-            OpenTestForm(testPage);
-            SetTestSuite(OpenedForm, testSuite);
+        public void SetupTestRun(int testPage = DefaultTestPage, string testSuite = DefaultTestSuite, string extensionId = "", string testCodeunitsRange = "",
+            string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[]? disabledTests = null, bool stabilityRun = false)
+        {
+            TestPage = testPage;
+            TestSuite = testSuite;
+
+            OpenTestForm(TestPage);
+            SetTestSuite(OpenedForm, TestSuite);
             SetExtensionId(OpenedForm, extensionId);
             SetTestCodeunits(OpenedForm, testCodeunitsRange);
             SetTestProcedures(OpenedForm, testProcedureRange);
@@ -57,7 +63,7 @@ namespace NaviPartner.ALTestRunner
             SetRunFalseOnDisabledTests(OpenedForm, disabledTests);
             SetStabilityRun(OpenedForm, stabilityRun);
             ClearTestResults(OpenedForm);
-            
+
             // TODO: Codecoverage settings if enabled!
 
             //CloseForm(form);

@@ -11,8 +11,8 @@ namespace NaviPartner.ALTestRunner
     {
         protected ClientSession ClientSession { get; private set; }
         protected string Culture { get; private set; }
-        protected ClientLogicalForm OpenedForm { get; private set; }
-        protected string OpenedFormName { get; private set; }
+        internal ClientLogicalForm? OpenedForm { get; private set; } = null;
+        protected string OpenedFormName { get; private set; } = "";
         private ClientLogicalForm PsTestRunnerCaughtForm;
         
         public ClientContext(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
@@ -114,7 +114,7 @@ namespace NaviPartner.ALTestRunner
                     case ClientSessionState.TimedOut:
                         throw new Exception("ClientSession time out");
                     case ClientSessionState.Uninitialized:
-                        throw new Exception("ClientSession is Unitialized");
+                        throw new Exception("ClientSession is Uninitialized");
                 }
 
                 // ClientSession.LastException is present on the latest versions, not for BC 17 and maybe some highers too.
@@ -149,9 +149,31 @@ namespace NaviPartner.ALTestRunner
             return OpenedForm;
         }
 
-        public void CloseForm(ClientLogicalForm form)
+        public void CloseOpenedForm()
         {
+            if (OpenedForm != null)
+            {
+                this.InvokeInteraction(new CloseFormInteraction(OpenedForm));
+
+                OpenedForm = null;
+                OpenedFormName = "";
+            }
+        }
+
+        public void CloseForm(ClientLogicalForm? form)
+        {
+            if (form == null)
+            {
+                return;
+            }
+
             this.InvokeInteraction(new CloseFormInteraction(form));
+
+            if ((OpenedForm != null) && (form.Name == OpenedForm.Name))
+            {
+                OpenedForm = null;
+                OpenedFormName = "";
+            }
         }
 
         public ClientLogicalForm[] GetAllForms()
@@ -200,6 +222,9 @@ namespace NaviPartner.ALTestRunner
             {
                 this.CloseForm(form);
             }
+
+            OpenedForm = null;
+            OpenedFormName = "";
         }
 
         public void CloseAllErrorForms()
