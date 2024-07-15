@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { activeEditorIsOpenToTestAppJson, openEditorToTestFileIfNotAlready } from './alFileHelper';
 import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getLaunchConfiguration } from './config';
 import { failedToPublishMessage } from './constants';
-import { getALTestRunnerTerminal, invokePowerShellCmd, getDocumentWorkspaceFolder, getSmbAlExtensionPath } from './extension';
+import { getALTestRunnerTerminal } from './extension';
 import { awaitFileExistence } from './file';
 import { sendDebugEvent, sendFailedToPublishError, sendNoTestFolderNameError } from './telemetry';
 import { PublishResult, PublishType } from "./types";

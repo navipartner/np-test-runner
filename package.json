@@ -14,10 +14,9 @@
 	},
 	"icon": "np-al-test-runner-icon.jpg",
 	"files": [
-		"PowerShell/",
 		".bin/**"
 	],
-	"version": "0.29.1",
+	"version": "0.29.3",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -91,12 +90,6 @@
 				"command": "npaltestrunner.openConfigFile",
 				"title": "Open Config File",
 				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.installTestRunnerService",
-				"title": "Install Test Runner Service",
-				"category": "NP AL Test Runner",
-				"enablement": "false"
 			},
 			{
 				"command": "npaltestrunner.toggleCodeCoverage",
@@ -268,16 +261,6 @@
 						"description": "TextDecoration CSS to decorate failing lines with",
 						"default": "underline wavy red"
 					},
-					"np-al-test-runner.preTestCommand": {
-						"type": "string",
-						"scope": "resource",
-						"description": "A PowerShell command to execute prior to running tests"
-					},
-					"np-al-test-runner.postTestCommand": {
-						"type": "string",
-						"scope": "resource",
-						"description": "A PowerShell command to execute after tests have been executed"
-					},
 					"np-al-test-runner.enableCodeLens": {
 						"type": "boolean",
 						"scope": "resource",
@@ -443,7 +426,6 @@
 		"@types/xml2js": "^0.4.9",
 		"@vscode/extension-telemetry": "0.5.0",
 		"node-fetch": "^2.7.0",
-		"node-powershell": "^5.0.1",
 		"sanitize-filename": "^1.6.3",
 		"xml2js": "^0.5.0",
 		"xmldom": "^0.6.0",

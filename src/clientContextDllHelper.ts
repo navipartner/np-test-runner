@@ -4,10 +4,8 @@ import * as path from 'path';
 import * as fetch from 'node-fetch'; 
 import { isWindowsPlatform, getExtension, testRunnerClient } from './extension';
 import { DOMParser } from 'xmldom';
-import { InvocationResult } from 'node-powershell';
 import * as fs from 'fs';
-import { getALTestRunnerConfigKeyValue } from './config';
-import { version } from 'os';
+import { getALTestRunnerConfigKeyValue, setALTestRunnerConfig } from './config';
 import * as webApiClient from './webapiclient';
 
 const cslibFolderName = 'CSLibs';
@@ -98,7 +96,9 @@ export async function showSimpleQuickPick(items: string[], placeholderText?: str
 async function showArtifactVersionQuickPick(versions: string[]): Promise<string | undefined> {
 	let quickPick = vscode.window.createQuickPick();
 	if (versions) {
-		quickPick.items = versions.map(version => ({ label: version }));
+		quickPick.items = versions.map(version => ({ 
+			label: version
+		}));
 	}
 	quickPick.placeholder = 'Type BC [major.minor] to filter versions...';
 
@@ -136,8 +136,8 @@ async function showArtifactVersionQuickPick(versions: string[]): Promise<string 
 async function updateVersionPicker(versionPicker: vscode.QuickPick<vscode.QuickPickItem>, filter: string): Promise<vscode.QuickPick<vscode.QuickPickItem>> {
 	var platformFilter = 'platform';
 	let versions = await fetchVersions(`https://bcartifacts.blob.core.windows.net/onprem/`, filter);
-	versionPicker.items = versions.map(version => ({ label: version }));
-	versionPicker.items = versionPicker.items.filter(function (str) { return str.label.indexOf(platformFilter) !== -1; })
+	versions = versions.filter(function (str) { return str.indexOf(platformFilter) !== -1; });
+	versionPicker.items = versions.map(version => ({ label: version.split('/')[0] }));
 
 	return new Promise((resolve) => {
 		resolve(versionPicker);
@@ -203,7 +203,7 @@ export function getLibrariesFolder(version: string): string {
 /// the number of those might change or the names of the libraries could be different.
 /// The function is considered as a fast automated check. The user still have a chance to 
 /// (re)download the libraries manually if needed.
-export async function checkAndDownloadMissingDlls(version: string) : Promise<any> {	
+export async function checkAndDownloadMissingDlls(version: string) {	
 	const libFolderPath = getLibrariesFolder(version);
 
 	let someContentExist = false;
@@ -215,15 +215,15 @@ export async function checkAndDownloadMissingDlls(version: string) : Promise<any
 	}
 
 	if (someContentExist) {
-		return new Promise<any>((resolve) => {
-			resolve(true);
+		return new Promise<void>((resolve) => {
+			resolve();
 		})
 	}
 
-	return await downloadClientSessionLibraries(version);
+	await downloadClientSessionLibraries(version);
 }
 
-export async function downloadClientSessionLibraries(selectedVersion? : string) : Promise<InvocationResult> {
+export async function downloadClientSessionLibraries(selectedVersion? : string) {
 	const automaticallySelectedVersion = (!(selectedVersion == null || (selectedVersion.trim().length === 0)));
 
 	let artifactSource : types.BcArtifactSource;
@@ -245,12 +245,11 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 	}
 
 	if (selectedVersion) {
-		//let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
-		const versionOnly = selectedVersion.split('/')[0];
+		//let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();		
 
-		const destinationPath = getLibrariesFolder(versionOnly);
+		const destinationPath = getLibrariesFolder(selectedVersion);
 		const downloadParams: webApiClient.DownloadFilesFromRemoteZipParams = {
-			url: `${artifactSourceCdnUrl}${selectedVersion}`,
+			url: `${artifactSourceCdnUrl}${selectedVersion}/platform`,
 			destinationPath: destinationPath,
 			extractionFilter: "(?i)Applications\\\\testframework\\\\TestRunner\\\\Internal\\\\.*\\.dll$"
 		};
@@ -259,6 +258,8 @@ export async function downloadClientSessionLibraries(selectedVersion? : string) 
 		if (!isWindowsPlatform()) {
 			restoreDownloadedFileNames(destinationPath);
 		}
+
+		setALTestRunnerConfig('selectedBcVersion', selectedVersion);
 	}
 }
 

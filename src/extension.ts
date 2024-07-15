@@ -18,7 +18,6 @@ import { CodeCoverageCodeLensProvider } from './codeCoverageCodeLensProvider';
 import { registerCommands } from './commands';
 import { createHEADFileWatcherForTestWorkspaceFolder } from './git';
 import { createPerformanceStatusBarItem } from './performance';
-import { PowerShell, PowerShellOptions, PSExecutableType, InvocationError, InvocationResult } from 'node-powershell';
 import { checkAndDownloadMissingDlls } from './clientContextDllHelper';
 import { TestRunnerWorkflow } from './testRunnerWorkflow'
 import * as path from 'path';
@@ -208,104 +207,12 @@ export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alPro
 	}
 }
 
-export async function invokeTestRunner(command: string): Promise<types.ALTestAssembly[]> {
-	return new Promise(async (resolve) => {
-		sendDebugEvent('invokeTestRunner-start');
-		const config = getCurrentWorkspaceConfig();
-		getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
-		let publishType: types.PublishType = types.PublishType.None;
-
-		await checkMissingButConfiguredClientSessionLibsAndDownload();
-
-		if (!config.automaticPublishing) {
-			switch (config.publishBeforeTest) {
-				case 'Publish':
-					publishType = types.PublishType.Publish;
-					break;
-				case 'Rapid application publish':
-					publishType = types.PublishType.Rapid;
-					break;
-			}
-		}
-
-		const result = await publishApp(publishType);
-		if (!result.success) {
-			const results: types.ALTestAssembly[] = [];
-			resolve(results);
-			return;
-		}
-
-		if (config.enableCodeCoverage) {
-			command += ' -GetCodeCoverage';
-		}
-
-		if (config.enablePerformanceProfiler) {
-			command += ' -GetPerformanceProfile';
-		}
-
-		if (fs.existsSync(getLastResultPath())) {
-			fs.unlinkSync(getLastResultPath());
-		}
-
-		await vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
-			title: `Running tests`,
-			cancellable: true
-		}, async (progress, token) => {
-			progress.report({ message: "Working ..." });
-			
-			try {
-				await invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
-				await invokePowerShellCmd(config.preTestCommand);
-				
-				await invokePowerShellCmd(command).then((result) => {
-
-				}).catch((error) => {
-					vscode.window.showErrorMessage(`Test execution failed`, error);
-				});
-				
-				//await rpcClient.OpenClientSession();
-
-				await invokePowerShellCmd(config.postTestCommand);
-		
-				return new Promise<void>((resolve) => {
-					resolve();
-				});
-			} catch (e) {
-				throw e;
-			}
-		});
-
-		awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
-			if (resultsAvailable) {
-				const results: types.ALTestAssembly[] = await readTestResults(vscode.Uri.file(getLastResultPath()));
-				resolve(results);
-
-				triggerUpdateDecorations();
-			}
-		});
-	});
-}
-
-async function readTestResults(uri: vscode.Uri): Promise<types.ALTestAssembly[]> {
-	return new Promise(async resolve => {
-		const xmlParser = new xml2js.Parser();
-		const resultXml = fs.readFileSync(uri.fsPath, { encoding: 'utf-8' });
-		const resultObj = await xmlParser.parseStringPromise(resultXml);
-		const assemblies: types.ALTestAssembly[] = resultObj.assemblies.assembly;
-
-		resolve(assemblies);
-	});
-}
-
 export function initDebugTest(filename: string) {
-	invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
-	invokePowerShellCmd('Invoke-TestRunnerService -FileName "' + filename + '" -Init');
+	throw new Error(`Test debugging hasn't been implemented yet!`);
 }
 
 export function invokeDebugTest(filename: string, selectionStart: number) {
-	invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`);
-	invokePowerShellCmd('Invoke-TestRunnerService -FileName "' + filename + '" -SelectionStart ' + selectionStart);
+	throw new Error(`Test debugging hasn't been implemented yet!`);
 }
 
 export async function attachDebugger() {
@@ -371,134 +278,6 @@ export async function getDocumentWorkspaceFolder(): Promise<string | undefined> 
 	} else {
 		error("No project was selected!");
 	}
-}
-
-export async function invokePowerShellCmd(command: string) : Promise<any> {
-	
-	if ((command === null) || (command == '')) {
-		return new Promise((resolve) => {
-			resolve(null);
-		})
-	}
-
-	const release = await runTestCallMutex.acquire();
-	
-	try {
-		if (powershellSession === null) {
-			let powershellOptions : PowerShellOptions = {
-				executable: PSExecutableType.PowerShellCore,
-				throwOnInvocationError: false,
-				executableOptions: {
-					'-NoLogo': true,
-					'-NoExit': true,
-					"-NonInteractive": true
-				}
-			}
-
-			powershellSession = new PowerShell(powershellOptions);
-
-			try { 
-				
-				await powershellSession.invoke(`$ErrorActionPreference = "Stop"`);
-
-				let alTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'ALTestRunner.psm1');
-				await powershellSession.invoke(`Import-Module ${alTestRunnerModulePath};`);
-
-				let npAlTestRunnerModulePath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'NPALTestRunner.psm1');
-				await powershellSession.invoke(`Import-Module ${npAlTestRunnerModulePath}`);
-
-				let npClientContextDotNetPath = path.join(getExtension()!.extensionPath, 'PowerShell', 'NPTestRunner', 'ClientContextDotNet', 'ClientContextDotNet.psm1');
-				await powershellSession.invoke(`Import-Module ${npClientContextDotNetPath}`);
-			
-				let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
-				await powershellSession.invoke(`Set-Location ${activeDocumentRootFolderPath}`);
-
-			} catch(e) {
-				if (powershellSession) {
-					await powershellSession.dispose();
-					powershellSession = null;
-				}
-				throw e;
-			}
-		}
-
-		try {
-			console.log(command);
-			let result = await powershellSession.invoke(command);
-			return result;
-		} catch(error) {
-			let errorMsg = null;
-			let errorStack = null;
-			let errorException = null;
-			let hasErrorDetails = false;
-
-			try {			
-				errorMsg = extractPowerShellError(error.message);
-				errorStack = extractPowerShellError(error.stack);
-				
-				const errorSegments = tryToParsePowerShellComplexError(errorMsg);
-				if ((errorSegments) && (errorSegments.length == 4) && (errorSegments[0] == 'pwshexception')) {
-					errorMsg = errorSegments[1];
-					errorStack = errorSegments[2];
-					errorException = errorSegments[3];
-					hasErrorDetails = true;
-				}
-
-				writeToOutputChannel(`${command}  =>  ${errorMsg}`);
-				writeToOutputChannel(`			  =>  ${errorStack}`);
-
-				if (hasErrorDetails) {
-					console.log(`${command}  =>  ${errorMsg}`);
-					console.log(`			  =>  ${errorStack}`);
-					console.log(`			  =>  ${errorException}`);
-				} else {
-					console.log(error);
-				}
-			} catch {
-				console.log(error);
-			}
-
-			try {
-				if ((debugChannel) && (!debugChannelActivated)) {
-					debugChannel.show(false);
-					debugChannelActivated = true;
-				}
-			} catch(e) {
-				console.log(`Can't open PowerShell invocation error channel: ${e}`);
-			}
-
-			if (errorMsg != null) {
-				throw errorMsg;
-			} else {
-				throw error;
-			}
-		}
-	} catch (ex) {
-		throw ex;
-	} finally {
-		release();
-	}
-}
-
-function extractPowerShellError(extractionString: string) : string {
-	let errorMsg = extractionString;
-	errorMsg = errorMsg.replaceAll('[31;1m', '').replaceAll('[0m', '').replaceAll('[36;1m', '').replaceAll('\r\n', '');
-	return errorMsg;
-}
-
-function tryToParsePowerShellComplexError(errorMsg: string) : string[] {
-	// Use a regular expression to find all substrings within {{ }}
-	const pattern: RegExp = /{{(.*?)}}/gs;
-	const substrings: string[] = [];
-	let match: RegExpExecArray | null;
-
-	// Use RegExp.exec() to find all matches
-	while ((match = pattern.exec(errorMsg)) !== null) {
-		// match[1] contains the text within {{ }}
-		substrings.push(match[1]);
-	}
-
-	return substrings;
 }
 
 export function getSmbAlExtension() : vscode.Extension<any> {
@@ -749,64 +528,6 @@ export function deactivate() {
 	}	
  }
 
-export async function getRunnerParams(command: string): Promise<types.ALTestAssembly[]> {
-	return new Promise(async (resolve) => {
-		sendDebugEvent('invokeTestRunner-start');
-		const config = getCurrentWorkspaceConfig();
-		getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
-		let publishType: types.PublishType = types.PublishType.None;
-
-		if (!config.automaticPublishing) {
-			switch (config.publishBeforeTest) {
-				case 'Publish':
-					publishType = types.PublishType.Publish;
-					break;
-				case 'Rapid application publish':
-					publishType = types.PublishType.Rapid;
-					break;
-			}
-		}
-
-		const result = await publishApp(publishType);
-		if (!result.success) {
-			const results: types.ALTestAssembly[] = [];
-			resolve(results);
-			return;
-		}
-
-		if (config.enableCodeCoverage) {
-			command += ' -GetCodeCoverage';
-		}
-
-		if (config.enablePerformanceProfiler) {
-			command += ' -GetPerformanceProfile';
-		}
-
-		if (fs.existsSync(getLastResultPath())) {
-			fs.unlinkSync(getLastResultPath());
-		}
-
-		invokePowerShellCmd(`Set-Location ${getTestFolderPath()}`).then(() => {
-			return invokePowerShellCmd(config.preTestCommand);
-		}).then(() => {
-			return invokePowerShellCmd(command);
-		}).then(() => {
-			invokePowerShellCmd(config.postTestCommand);
-		}).then(() => {
-			awaitFileExistence(getLastResultPath(), 0).then(async resultsAvailable => {
-				if (resultsAvailable) {
-					const results: types.ALTestAssembly[] = await readTestResults(vscode.Uri.file(getLastResultPath()));
-					resolve(results);
-	
-					triggerUpdateDecorations();
-				}
-			});
-		}).catch((error) => {
-			throw error;
-		});
-	});
-}
-
 export async function invokeCommandFromAlDevExtension(command: string, params?: any[]) : Promise<unknown> {
 	var extension =  getSmbAlExtension();
 
@@ -818,7 +539,7 @@ export async function invokeCommandFromAlDevExtension(command: string, params?: 
 	return vscode.commands.executeCommand(command, params);
 }
 
-export async function checkMissingButConfiguredClientSessionLibsAndDownload() : Promise<any> {
+export async function checkMissingButConfiguredClientSessionLibsAndDownload() {
 	const selectedBcVersion = getALTestRunnerConfigKeyValue('selectedBcVersion');
 	if (selectedBcVersion == null || (selectedBcVersion.trim().length === 0)) {
 		return new Promise<any>((resolve) => {
@@ -827,22 +548,10 @@ export async function checkMissingButConfiguredClientSessionLibsAndDownload() : 
 		});
 	}
 
-	return await checkAndDownloadMissingDlls(selectedBcVersion);
+	await checkAndDownloadMissingDlls(selectedBcVersion);
 }
 
-function checkPowerShellVersion(): Promise<string> {
-    return new Promise((resolve, reject) => {
-        cp.exec('pwsh -v', (error, stdout, stderr) => {
-            if (error) {
-                reject(`Error executing PowerShell: ${error.message}`);
-            } else {
-                resolve(extractSemver(stdout.trim()));
-            }
-        });
-    });
-}
-
-function checkDotNetVersion(): Promise<string> {
+async function checkDotNetVersion(): Promise<string> {
     return new Promise((resolve, reject) => {
         cp.exec('dotnet --version', (error, stdout, stderr) => {
             if (error) {
@@ -856,19 +565,10 @@ function checkDotNetVersion(): Promise<string> {
 
 function checkAllExternalPrerequisites() {
 	
-	const requiredPSVersion = '7.0.0';
-    const requiredDotNetVersion = '5.0.0';
+    const requiredDotNetVersion = '8.0.0';
 
-	Promise.all([checkPowerShellVersion(), checkDotNetVersion()])
-        .then(([psVersion, dotNetVersion]) => {
-			if (compareVersions(requiredPSVersion, psVersion)) {
-                console.log(`PowerShell version ${psVersion} meets the requirement.`);
-            } else {
-                showMissingPrerequisiteErrorMessage(
-					`PowerShell version ${psVersion} does not meet the required version ${requiredPSVersion}.`, 
-					'https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell');
-            }
-
+	Promise.all([checkDotNetVersion()])
+        .then(([dotNetVersion]) => {
 			if (compareVersions(requiredDotNetVersion, dotNetVersion)) {
                 console.log(`.NET version ${dotNetVersion} meets the requirement.`);
             } else {
@@ -878,7 +578,7 @@ function checkAllExternalPrerequisites() {
             }
         })
         .catch(error => {
-            vscode.window.showErrorMessage(`Requirement check failed: ${error}`);
+            vscode.window.showErrorMessage(`Requirement check for .NET ${requiredDotNetVersion} and higher failed: ${error}`);
         });
 }
 

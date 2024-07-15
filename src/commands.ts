@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { debugTestHandler, getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
 import { getALTestRunnerConfig, getALTestRunnerConfigPath, getALTestRunnerPath, getLaunchConfiguration, setALTestRunnerConfig, getCurrentWorkspaceConfig } from './config';
 import { existsSync, readdirSync, unlinkSync } from 'fs';
-import { invokePowerShellCmd, triggerUpdateDecorations } from './extension';
+import { triggerUpdateDecorations } from './extension';
 import { downloadClientSessionLibraries } from './clientContextDllHelper';
 import * as types from './types'
 import { toggleCodeCoverageDisplay } from './coverage';
@@ -61,10 +61,6 @@ export function registerCommands(context: vscode.ExtensionContext, testRunnerWor
 	context.subscriptions.push(vscode.commands.registerCommand('npaltestrunner.openConfigFile', async () => {
 		getALTestRunnerConfig();
 		vscode.window.showTextDocument(await vscode.workspace.openTextDocument(getALTestRunnerConfigPath()));
-	}));
-
-	context.subscriptions.push(vscode.commands.registerCommand('npaltestrunner.installTestRunnerService', async () => {
-		invokePowerShellCmd(`Install-TestRunnerService -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('npaltestrunner.toggleCodeCoverage', async (newCodeCoverageDisplay?: types.CodeCoverageDisplay) => {
