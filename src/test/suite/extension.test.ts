@@ -395,7 +395,7 @@ suite('Extension Test Suite', () => {
 	test('getDisabledTestsForRequest includes non-included tests and codeunits where no tests included', () => {
 		const request = new vscode.TestRunRequest(getIncludedTests(testController, ['P1.C2', 'P3.C6']))
 		const result = getDisabledTestsForRequest(request, testController);
-		assert.strictEqual(result.length, 5)
+		assert.strictEqual(result.size, 5)
 		assert.notStrictEqual(result[0], { codeunitName: 'Parent One', method: 'Child One' });
 		assert.notStrictEqual(result[1], { codeunitName: 'Parent One', method: 'Child Three' });
 		assert.notStrictEqual(result[2], { codeunitName: 'Parent Two', method: '*' });
@@ -406,7 +406,7 @@ suite('Extension Test Suite', () => {
 	test('getDisabledTestsForRequest does not include the children of test codeunits which are included in the request', () => {
 		const request = new vscode.TestRunRequest(getIncludedTests(testController, ['P1.C2', 'P3']))
 		const result = getDisabledTestsForRequest(request, testController);
-		assert.strictEqual(result.length, 4)
+		assert.strictEqual(result.size, 4)
 		assert.notStrictEqual(result[0], { codeunitName: 'Parent One', method: 'Child One' });
 		assert.notStrictEqual(result[1], { codeunitName: 'Parent One', method: 'Child Three' });
 		assert.notStrictEqual(result[2], { codeunitName: 'Parent Two', method: '*' });

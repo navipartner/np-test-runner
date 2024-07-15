@@ -3,14 +3,14 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as net from 'net';
-import * as http from 'http';
 import * as ext from './extension';
+import * as os from 'os';
 
 export class TestRunnerWebApiServer {
 
     private serverProcess: cp.ChildProcess = null;
     private _port: number = 0; public get port(): number { return this._port; }
-    private isDevelopment: boolean = true;   // TODO: Change!!!
+    private isDevelopment: boolean = false;
 
     public get IsRunning(): boolean {
         // TODO: We will probably need a more sophisticated method!!!
@@ -25,7 +25,17 @@ export class TestRunnerWebApiServer {
             return;
         }
 
-        const serverPath = path.join(context.extensionPath, '.bin', 'al-test-runner-webapi', 'al-test-runner-webapi.exe');
+        const isWindows = os.platform() === 'win32';
+        const serverPath = path.join(context.extensionPath, '.bin', 'al-test-runner-webapi', 'al-test-runner-webapi.dll');
+
+        if (!isWindows) {
+            try {
+                await fs.promises.chmod(serverPath, '755');
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to set execute permissions: ${error}`);
+                return;
+            }
+        }
 
         try {
             // Check if the server executable exists
@@ -39,7 +49,7 @@ export class TestRunnerWebApiServer {
             this._port = 0;
             const port = await this.GetLowestFreePort(49152, 65535);
 
-            this.serverProcess = cp.spawn(serverPath, [port.toString()], {
+            this.serverProcess = cp.spawn('dotnet', [serverPath, port.toString()], {
                 env: {
                     ...process.env,
                     MY_VAR: 'value',
