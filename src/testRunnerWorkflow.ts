@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getCurrentWorkspaceConfig } from './config'
 import { getTestFolderPath } from './alFileHelper'
-import { publishAppFileUsingPwsh } from './publish';
+import { publishAppUsingAlCommand, publishAppWithRapidUsingAlCommand } from './publish';
 import { documentIsTestCodeunit, getTestMethodRangesFromDocument } from './alFileHelper';
 import { debugTestHandler, getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
 
@@ -131,11 +131,12 @@ export class TestRunnerWorkflow {
                     if (this.lastCompiledAppFile == null) {
                         throw new Error("Before publishing, you have to compile first! Verify compilation step is properly configured and has been executed successfully!");
                     }
-                    await publishAppFileUsingPwsh(this.lastCompiledAppFile);
-                    break;
+                    throw new Error('Publishing via developer endpoint isn not supported currently!')
                 case "alPublish":
+                    await publishAppUsingAlCommand();
                     break;
                 case "alRapidPublish":
+                    await publishAppWithRapidUsingAlCommand();
                     break
                 default:
                     throw new Error(`Publishing method '${publishMethod}' is unknown and unsupported!`);

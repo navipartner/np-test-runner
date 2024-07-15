@@ -72,32 +72,12 @@ export function publishApp(publishType: PublishType): Promise<PublishResult> {
     });
 }
 
-export async function publishAppFileUsingPwsh(uri: vscode.Uri): Promise<PublishResult> {
-    try {
-        return new Promise(async resolve => {
-            shouldPublishApp = false;
-            let activeDocumentRootFolderPath = await getDocumentWorkspaceFolder();
-            let smbAlExtPath = getSmbAlExtensionPath();
-            await invokePowerShellCmd(`Set-Location ${activeDocumentRootFolderPath}`);
-            await invokePowerShellCmd(`Publish-App -AppFile "${uri.fsPath}" -smbAlExtPath "${smbAlExtPath}" `);        
-    
-            resolve({ success: true, message: '' });
-        });
-    } catch (e) {
-        throw e;
-    }
+export async function publishAppUsingAlCommand() {
+    return await vscode.commands.executeCommand('al.publishNoDebug');
 }
 
-export async function publishAppFileUsingPwshWithDialog(uri: vscode.Uri): Promise<PublishResult> {
-    return await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Publishing changs`,
-        cancellable: true
-    }, async (progress, token) => {
-        progress.report({ message: "" });
-        
-        return await publishAppFileUsingPwsh(uri);
-    });
+export async function publishAppWithRapidUsingAlCommand() {
+    return await vscode.commands.executeCommand('al.incrementalPublishNoDebug');
 }
 
 export async function onChangeAppFile(uri: vscode.Uri) {
@@ -108,8 +88,6 @@ export async function onChangeAppFile(uri: vscode.Uri) {
     if ((uri.fsPath.indexOf('dep.app') > 0) || (uri.fsPath.indexOf('.alpackages') > 0)) {
         return;
     }
-
-    await publishAppFileUsingPwshWithDialog(uri);
 }
 
 function getTerminalName(): string {

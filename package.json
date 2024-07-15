@@ -17,7 +17,7 @@
 		"PowerShell/",
 		".bin/**"
 	],
-	"version": "0.28.2",
+	"version": "0.29.0",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -256,16 +256,6 @@
 							}
 						}
 					},
-					"np-al-test-runner.publishBeforeTest": {
-						"enum": [
-							"None",
-							"Publish",
-							"Rapid application publish"
-						],
-						"description": "The AL publishing command to call before running tests",
-						"scope": "resource",
-						"default": "None"
-					},
 					"np-al-test-runner.highlightFailingLine": {
 						"type": "boolean",
 						"scope": "resource",
@@ -340,11 +330,6 @@
 						"description": "Determines where test results will be displayed",
 						"default": "Output"
 					},
-					"np-al-test-runner.enablePublishingFromPowerShell": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Enable (experimental) publishing apps from PowerShell"
-					},
 					"np-al-test-runner.publishTimeout": {
 						"type": "number",
 						"scope": "resource",
@@ -376,8 +361,8 @@
 						"description": "Test Runner Workflows",
 						"default": {
 							"defaultWorkflow": {
-								"compile": true,
-								"publish": "viaDevEndpoint",
+								"compile": false,
+								"publish": "alRapidPublish",
 								"test": "functionAtCursor",
 								"debug": false
 							}
