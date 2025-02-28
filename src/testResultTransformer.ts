@@ -114,58 +114,62 @@ export class TestResultsTransformer {
     }
 
     public static async transformToXUnit(testRuns: TestRun[]): Promise<string> {
-        const assemblies = testRuns.filter(trs => trs.testResults != null).map(testRun => {
-            const totalTests = testRun.testResults.length;
-            const passedTests = testRun.testResults.filter(t => t.result !== "1").length;
-            const failedTests = totalTests - passedTests;
-
-            const assembly = {
-                _attributes: {
-                    name: testRun.name,
-                    "test-framework": "xUnit.net",
-                    "run-date": new Date(testRun.startTime).toISOString().split('T')[0],
-                    "run-time": new Date(testRun.startTime).toISOString().split('T')[1].split('.')[0],
-                    total: totalTests.toString(),
-                    passed: passedTests.toString(),
-                    failed: failedTests.toString(),
-                    skipped: "0",
-                    time: ((new Date(testRun.finishTime).getTime() - new Date(testRun.startTime).getTime()) / 1000).toString()
-                },
-                collection: {
+        if (testRuns && testRuns.filter !== undefined) {
+            const assemblies = testRuns.filter(trs => trs.testResults != null).map(testRun => {
+                const totalTests = testRun.testResults.length;
+                const passedTests = testRun.testResults.filter(t => t.result !== "1").length;
+                const failedTests = totalTests - passedTests;
+    
+                const assembly = {
                     _attributes: {
-                        name: testRun.codeUnit,
+                        name: testRun.name,
+                        "test-framework": "xUnit.net",
+                        "run-date": new Date(testRun.startTime).toISOString().split('T')[0],
+                        "run-time": new Date(testRun.startTime).toISOString().split('T')[1].split('.')[0],
                         total: totalTests.toString(),
                         passed: passedTests.toString(),
                         failed: failedTests.toString(),
-                        skipped: "0"
+                        skipped: "0",
+                        time: ((new Date(testRun.finishTime).getTime() - new Date(testRun.startTime).getTime()) / 1000).toString()
                     },
-                    test: testRun.testResults.map(testResult => {
-                        const test: any = {
-                            _attributes: {
-                                name: testResult.method,
-                                type: testRun.codeUnit,
-                                method: testResult.method,
-                                time: ((new Date(testResult.finishTime).getTime() - new Date(testResult.startTime).getTime()) / 1000).toString(),
-                                result: testResult.result === "1" ? "Fail" : "Pass"
-                            }
-                        };
-
-                        if (testResult.result === "1") {
-                            test.failure = {
-                                message: { _text: testResult.message || "" },
-                                "stack-trace": { _text: testResult.stackTrace || "" }
+                    collection: {
+                        _attributes: {
+                            name: testRun.codeUnit,
+                            total: totalTests.toString(),
+                            passed: passedTests.toString(),
+                            failed: failedTests.toString(),
+                            skipped: "0"
+                        },
+                        test: testRun.testResults.map(testResult => {
+                            const test: any = {
+                                _attributes: {
+                                    name: testResult.method,
+                                    type: testRun.codeUnit,
+                                    method: testResult.method,
+                                    time: ((new Date(testResult.finishTime).getTime() - new Date(testResult.startTime).getTime()) / 1000).toString(),
+                                    result: testResult.result === "1" ? "Fail" : "Pass"
+                                }
                             };
-                        }
-
-                        return test;
-                    })
-                }
-            };
-
-            return { assembly };
-        });
-
-        return this.jsonToXml({ assemblies });
+    
+                            if (testResult.result === "1") {
+                                test.failure = {
+                                    message: { _text: testResult.message || "" },
+                                    "stack-trace": { _text: testResult.stackTrace || "" }
+                                };
+                            }
+    
+                            return test;
+                        })
+                    }
+                };
+    
+                return { assembly };
+            });
+    
+            return this.jsonToXml({ assemblies });
+        } else {
+            return "";
+        }
     }
 
     public static async transformToJUnit(testRuns: TestRun[]): Promise<string> {

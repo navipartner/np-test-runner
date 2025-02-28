@@ -152,7 +152,7 @@ export async function runTestHandler(request: vscode.TestRunRequest) {
 
     run.end();
     sendTestRunFinishedEvent(request);
-    if (results.length > 0) {
+    if (results && results.length > 0) {
         outputTestResults(results);
     }
 }
