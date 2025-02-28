@@ -40,7 +40,7 @@ namespace NaviPartner.ALTestRunner.WebApi
 
         private static int ParsePort(string[] args)
         {
-            const int defaultPort = 63731; // Default port if not specified
+            const int defaultPort = 49352; // Default port if not specified
 
             if (args.Length > 0 && int.TryParse(args[0], out int port))
             {
