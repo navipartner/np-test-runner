@@ -47,7 +47,7 @@ export class TestRunnerWebApiServer {
         }
 
         try {
-            this._port = await this.GetLowestFreePort(49152, 65535);
+            this._port = await this.GetLowestFreePort(60995, 65535);
             ext.writeToOutputChannel(`Starting server on port ${this._port}`);
 
             let stdoutData = '';
@@ -250,7 +250,7 @@ export class TestRunnerWebApiServer {
         });
     }
 
-    private async GetLowestFreePort(startPort: number = 49152, endPort: number = 65535): Promise<number> {
+    private async GetLowestFreePort(startPort: number = 60995, endPort: number = 65535): Promise<number> {
         try {
             const port = await this.findFreePort(startPort, endPort);
             ext.writeToOutputChannel(`Found free port: ${port}`);
