@@ -144,6 +144,7 @@ namespace NaviPartner.ALTestRunner.Integration
     {
         WebServiceClient,
         WebClient,
-        Background
+        Background,
+        ClientService
     }
 }
