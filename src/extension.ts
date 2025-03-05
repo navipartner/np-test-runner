@@ -213,10 +213,11 @@ export async function attachDebugger() {
 		return;
 	}
 
-	const alTestRunnerConfig = getALTestRunnerConfig();
+	let alTestRunnerConfig = getALTestRunnerConfig();
 	
 	if (alTestRunnerConfig.attachConfigName === undefined) {
 		await selectAttachConfig()
+		alTestRunnerConfig = getALTestRunnerConfig();
 	}
 
 	if (alTestRunnerConfig.attachConfigName === undefined) {

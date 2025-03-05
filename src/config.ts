@@ -116,12 +116,12 @@ export function getDebugConfigurationsFromLaunchJson(type: string) {
 	return debugConfigurations.filter(element => { return element.request === type; }).slice();
 }
 
-export function getConfigurationsFromLaunchJsonByName(name: string) : vscode.DebugConfiguration {
+export async function getConfigurationsFromLaunchJsonByName(name: string) : Promise<vscode.DebugConfiguration> {
 	const testWorkspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(getALTestRunnerConfigPath()));
 	const configuration = vscode.workspace.getConfiguration('launch', testWorkspaceFolder);
 	const debugConfigurations = configuration.configurations as Array<vscode.DebugConfiguration>;
 	const configs = debugConfigurations.filter(element => { return element.name === name; }).slice();
-	
+
 	if (configs.length > 0) {
 		return configs[0];
 	} else {
