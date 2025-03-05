@@ -14,6 +14,7 @@ namespace NaviPartner.ALTestRunner
         internal ClientLogicalForm? OpenedForm { get; private set; } = null;
         protected string OpenedFormName { get; private set; } = "";
         private ClientLogicalForm PsTestRunnerCaughtForm;
+        protected bool IgnoreErrors { get; private set; } = true;
         
         public ClientContext(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
             TimeSpan interactionTimeout, string culture) : base()
@@ -101,33 +102,46 @@ namespace NaviPartner.ALTestRunner
             Console.WriteLine("Client session ready ...");
         }
 
+        public void SetIgnoreServerErrors(bool ignoreServerErrors)
+        {
+            this.IgnoreErrors = ignoreServerErrors;
+        }
+
         protected void AwaitState(ClientSessionState state)
         {
             while (this.ClientSession.State != state)
             {
                 Thread.Sleep(100);
+                string exceptionMessage = "";
 
                 switch (this.ClientSession.State)
                 {
                     case ClientSessionState.InError:
-                        throw new Exception("ClientSession in Error state");
+                    exceptionMessage = "ClientSession in Error state";
+                    break;
                     case ClientSessionState.TimedOut:
-                        throw new Exception("ClientSession time out");
+                    exceptionMessage = "ClientSession time out";
+                    break;
                     case ClientSessionState.Uninitialized:
-                        throw new Exception("ClientSession is Uninitialized");
+                    exceptionMessage = "ClientSession is Uninitialized";
+                    break;
                 }
 
-                // ClientSession.LastException is present on the latest versions, not for BC 17 and maybe some highers too.
-                dynamic session = this.ClientSession;
-                if (HasProperty(session, "LastException"))
+                if (!string.IsNullOrEmpty(exceptionMessage))
                 {
-                    if (session.LastException != null) {
-                        //throw new Exception(GetProperty(session, "LastException").ToString());
-                        throw new Exception(session.LastException.Message);
+                    // ClientSession.LastException is present on the latest versions, not for BC 17 and maybe some highers too.
+                    string lastExceptionDetails = "";
+
+                    dynamic session = this.ClientSession;
+                    if (HasProperty(session, "LastException"))
+                    {
+                    if (session.LastException != null)
+                    {
+                        lastExceptionDetails = session.LastException.ToString();
                     }
-                } else
-                {
-                    // TODO: ???
+                    }
+
+                    throw new Exception($"{exceptionMessage}. Last exception: {lastExceptionDetails}");
                 }
             }
         }
@@ -216,6 +230,11 @@ namespace NaviPartner.ALTestRunner
             return form;
         }
 
+        public ClientLogicalForm InvokeActionAndCatchForm(ClientActionControl action)
+        {
+            return this.InvokeInteractionAndCatchForm(new InvokeActionInteraction(action));
+        }
+
         public void CloseAllForms()
         {
             foreach (var form in this.GetAllForms())
@@ -237,6 +256,7 @@ namespace NaviPartner.ALTestRunner
                 }
             }
         }
+        
         public void CloseAllWarningForms()
         {
             foreach (var form in this.GetAllForms())
@@ -247,24 +267,176 @@ namespace NaviPartner.ALTestRunner
             }
         }
 
-        protected ClientLogicalControl GetControlByName(ClientLogicalControl control, string name)
+        public ClientLogicalControl GetControlByName(ClientLogicalControl control, string name)
         {
             return control.ContainedControls.Where(clc => (clc.Name == name)).First();
         }
 
-        protected ClientActionControl GetActionByName(ClientLogicalControl control, string name)
+        public ClientLogicalControl GetControlByCaption(ClientLogicalControl control, string caption)
+        {
+            return control.ContainedControls.FirstOrDefault(clc => clc.Caption?.Replace("&", "") == caption);
+        }
+
+        public ClientLogicalControl GetControlByType(ClientLogicalControl control, Type type)
+        {
+            return control.ContainedControls.FirstOrDefault(clc => type.IsInstanceOfType(clc));
+        }
+
+        public void SaveValue(ClientLogicalControl control, string newValue)
+        {
+            this.InvokeInteraction(new SaveValueInteraction(control, newValue));
+        }
+
+        public ClientActionControl GetActionByName(ClientLogicalControl control, string name)
         {
             return (ClientActionControl)control.ContainedControls.Where(c => (c.GetType() == typeof(ClientActionControl)) && c.Name == name).First();
         }
 
-        protected void InvokeAction(ClientActionControl action)
+        public ClientActionControl GetActionByCaption(ClientLogicalControl control, string caption)
+        {
+            return (ClientActionControl)control.ContainedControls
+                .Where(c => c is ClientActionControl && ((ClientActionControl)c).Caption?.Replace("&", "") == caption)
+                .FirstOrDefault();
+        }
+
+        public void InvokeAction(ClientActionControl action)
         {
             InvokeInteraction(new InvokeActionInteraction(action));
         }
 
-        protected void SaveValue(ClientLogicalControl control, string newValue)
+        public void ScrollRepeater(ClientRepeaterControl repeater, int by)
         {
-            this.InvokeInteraction(new SaveValueInteraction(control, newValue));
+            this.InvokeInteraction(new ScrollRepeaterInteraction(repeater, by));
+        }
+
+        public void ActivateControl(ClientLogicalControl control)
+        {
+            this.InvokeInteraction(new ActivateControlInteraction(control));
+        }
+
+        public string GetErrorFromErrorForm()
+        {
+            string errorText = "";
+            foreach (var form in this.ClientSession.OpenedForms)
+            {
+                if (form.ControlIdentifier == "00000000-0000-0000-0800-0000836bd2d2")
+                {
+                    var errorControl = form.ContainedControls.FirstOrDefault(c => c is ClientStaticStringControl);
+                    if (errorControl != null)
+                    {
+                        errorText = ((ClientStaticStringControl)errorControl).StringValue;
+                    }
+                }
+            }
+            return errorText;
+        }
+
+        public string GetWarningFromWarningForm()
+        {
+            string warningText = "";
+            foreach (var form in this.ClientSession.OpenedForms)
+            {
+                if (form.ControlIdentifier == "00000000-0000-0000-0300-0000836bd2d2")
+                {
+                    var warningControl = form.ContainedControls.FirstOrDefault(c => c is ClientStaticStringControl);
+                    if (warningControl != null)
+                    {
+                        warningText = ((ClientStaticStringControl)warningControl).StringValue;
+                    }
+                }
+            }
+            return warningText;
+        }
+
+        public Dictionary<string, object> GetFormInfo(ClientLogicalForm form)
+        {
+            var result = new Dictionary<string, object>();
+            result["title"] = $"{form.Name} {form.Caption}";
+            
+            var controls = new List<Dictionary<string, object>>();
+            foreach (var control in form.Children)
+            {
+                controls.Add(DumpControl(control, 1));
+            }
+            
+            result["controls"] = controls;
+            return result;
+        }
+
+        private Dictionary<string, object> DumpRowControl(ClientLogicalControl control)
+        {
+            var result = new Dictionary<string, object>();
+            result[control.Name] = control.ObjectValue;
+            return result;
+        }
+
+        private Dictionary<string, object> DumpControl(ClientLogicalControl control, int indent)
+        {
+            var output = new Dictionary<string, object>();
+            output["name"] = control.Name;
+            output["type"] = control.GetType().Name;
+            
+            if (control is ClientGroupControl groupControl)
+            {
+                output["caption"] = groupControl.Caption;
+                output["mappingHint"] = groupControl.MappingHint;
+            }
+            else if (control is ClientStaticStringControl staticStringControl)
+            {
+                output["value"] = staticStringControl.StringValue;
+            }
+            else if (control is ClientInt32Control int32Control)
+            {
+                output["value"] = int32Control.ObjectValue;
+            }
+            else if (control is ClientStringControl stringControl)
+            {
+                output["value"] = stringControl.StringValue;
+            }
+            else if (control is ClientActionControl actionControl)
+            {
+                output["caption"] = actionControl.Caption;
+            }
+            else if (control is ClientFilterLogicalControl)
+            {
+                // No additional properties
+            }
+            else if (control is ClientRepeaterControl repeaterControl)
+            {
+                var rows = new List<Dictionary<string, object>>();
+                output[control.Name] = rows;
+                
+                int index = 0;
+                while (true)
+                {
+                    if (index >= (repeaterControl.Offset + repeaterControl.DefaultViewport.Count))
+                    {
+                        ScrollRepeater(repeaterControl, 1);
+                    }
+                    
+                    int rowIndex = index - (int)repeaterControl.Offset;
+                    if (rowIndex >= repeaterControl.DefaultViewport.Count)
+                    {
+                        break;
+                    }
+                    
+                    var row = repeaterControl.DefaultViewport[rowIndex];
+                    var rowOutput = new Dictionary<string, object>();
+                    
+                    foreach (var child in row.Children)
+                    {
+                        foreach (var item in DumpRowControl(child))
+                        {
+                            rowOutput[item.Key] = item.Value;
+                        }
+                    }
+                    
+                    rows.Add(rowOutput);
+                    index++;
+                }
+            }
+            
+            return output;
         }
 
         private void ClientSession_FormToShow(object? sender, ClientFormToShowEventArgs e)
@@ -277,7 +449,7 @@ namespace NaviPartner.ALTestRunner
             var form = e.DialogToShow;
             if (form.ControlIdentifier == "00000000-0000-0000-0800-0000836bd2d2") {
                 var errorControl = form.ContainedControls.Where(c => c.GetType() == typeof(ClientStaticStringControl)).First();
-                HandleClientSessionError($"ERROR: {errorControl.StringValue}", true);
+                HandleClientSessionError($"ERROR: {errorControl.StringValue}", null);
             }
             if (form.ControlIdentifier == "00000000-0000-0000-0300-0000836bd2d2") {
                 var errorControl = form.ContainedControls.Where(c => c.GetType() == typeof(ClientStaticStringControl)).First();
@@ -292,17 +464,17 @@ namespace NaviPartner.ALTestRunner
 
         private void Cs_InvalidCredentialsError(object? sender, MessageToShowEventArgs e)
         {
-            HandleClientSessionError("InvalidCredentialsError", true);
+            HandleClientSessionError("InvalidCredentialsError", null);
         }
 
         private void Cs_UnhandledException(object? sender, ExceptionEventArgs e)
         {
-            HandleClientSessionError($"UnhandledException: {e.Exception}", true);
+            HandleClientSessionError($"UnhandledException: {e.Exception}", null);
         }
 
         private void Cs_CommunicationError(object? sender, ExceptionEventArgs e)
         {
-            HandleClientSessionError($"CommunicationError: {e.Exception}", true);
+            HandleClientSessionError($"CommunicationError: {e.Exception}", null);
         }
 
         private void Cs_MessageToShow(object? sender, MessageToShowEventArgs e)
@@ -313,7 +485,7 @@ namespace NaviPartner.ALTestRunner
         private void HandleClientSessionError(string errorMsg, bool? throwError)
         {
             Console.WriteLine($"ERROR: {errorMsg}");
-            if (throwError == true)
+            if (throwError == true || (!this.IgnoreErrors && throwError != false))
             {
                 throw new Exception(errorMsg);
             }
