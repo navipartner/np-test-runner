@@ -188,7 +188,7 @@ namespace NaviPartner.ALTestRunner.Integration
                     // Get service URL and verify service is healthy
                     var serviceUrl = await GetServiceUrl(DefaultLaunchConfig);
                     var bcVersion = DefaultALTestRunnerConfig.selectedBcVersion;
-                    var bcVersionLibsPath = Path.Combine(alTestRunnerExtPath, ".npaltestrunner", "CSLibs", bcVersion);
+                    var bcVersionLibsPath = Path.Combine(Path.GetFullPath(alTestRunnerExtPath), ".npaltestrunner", "CSLibs", bcVersion);
 
                     if (!Directory.Exists(bcVersionLibsPath))
                         throw new DirectoryNotFoundException($"BC version libraries path not found: {bcVersionLibsPath}");
@@ -454,7 +454,7 @@ namespace NaviPartner.ALTestRunner.Integration
             if (string.IsNullOrEmpty(alProjectPath))
                 throw new ArgumentNullException(nameof(alProjectPath));
 
-            var path = Path.Combine(alProjectPath, ".vscode", "launch.json");
+            var path = Path.Combine(Path.GetFullPath(alProjectPath), ".vscode", "launch.json");
 
             return path;
         }
@@ -501,7 +501,7 @@ namespace NaviPartner.ALTestRunner.Integration
             if (string.IsNullOrEmpty(alProjectPath))
                 throw new ArgumentNullException(nameof(alProjectPath));
 
-            return Path.Combine(alProjectPath, ".npaltestrunner", "config.json");
+            return Path.Combine(Path.GetFullPath(alProjectPath), ".npaltestrunner", "config.json");
         }
 
         internal async Task<ALTestRunnerConfig> GetALTestRunnerConfig([NotNull] string alTestRunnerConfigPath)
