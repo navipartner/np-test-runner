@@ -11,6 +11,9 @@ namespace NaviPartner.ALTestRunner.Integration
         // The name of the launch configuration to test against
         public string launchConfigName { get; set; }
 
+        // The name of the attach configuration to debug test against
+        public string attachConfigName { get; set; }
+
         // The path to save details of code coverage to
         // e.g. .//.npaltestrunner//codecoverage.json
         public string codeCoveragePath { get; set; }

@@ -56,6 +56,7 @@ export function setALTestRunnerConfig(keyName: string, keyValue: string | undefi
 function createALTestRunnerConfig() {
 	let config: types.ALTestRunnerConfig = {
 		launchConfigName: "",
+		attachConfigName: "",
 		companyName: "",
 		testSuiteName: "",
 		testRunnerServiceUrl: "",
@@ -115,6 +116,19 @@ export function getDebugConfigurationsFromLaunchJson(type: string) {
 	return debugConfigurations.filter(element => { return element.request === type; }).slice();
 }
 
+export function getConfigurationsFromLaunchJsonByName(name: string) : vscode.DebugConfiguration {
+	const testWorkspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(getALTestRunnerConfigPath()));
+	const configuration = vscode.workspace.getConfiguration('launch', testWorkspaceFolder);
+	const debugConfigurations = configuration.configurations as Array<vscode.DebugConfiguration>;
+	const configs = debugConfigurations.filter(element => { return element.name === name; }).slice();
+	
+	if (configs.length > 0) {
+		return configs[0];
+	} else {
+		return null;
+	}
+}
+
 export function getLaunchJsonPath() {
 	return getTestFolderPath() + '\\.vscode\\launch.json';
 }
@@ -134,6 +148,23 @@ export async function selectLaunchConfig() {
 	}
 
 	setALTestRunnerConfig('launchConfigName', selectedConfig);
+}
+
+export async function selectAttachConfig() {
+	sendDebugEvent('selectAttachConfig-start');
+
+	let debugConfigurations = getDebugConfigurationsFromLaunchJson('attach');
+	let selectedConfig;
+
+	if (debugConfigurations.length === 1) {
+		selectedConfig = debugConfigurations.shift()!.name;
+	}
+	else if (debugConfigurations.length > 1) {
+		let configNames: Array<string> = debugConfigurations.map(element => element.name);
+		selectedConfig = await vscode.window.showQuickPick(configNames, { canPickMany: false, placeHolder: 'Please select a configuration to debug tests against' });
+	}
+
+	setALTestRunnerConfig('attachConfigName', selectedConfig);
 }
 
 export function getCurrentWorkspaceConfig(forTestFolder: boolean = true) {

@@ -8,6 +8,10 @@
             "type": "string",
             "description": "The name of the launch configuration to test against"
         },
+        "attachConfigName": {
+            "type": "string",
+            "description": "The name of the attach configuration to debug test against"
+        },
         "companyName": {
             "type": "string",
             "description": "The Business Central company to run the tests in"

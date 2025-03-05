@@ -1,14 +1,13 @@
 import * as vscode from 'vscode';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getALObjectFromPath, getALObjectOfDocument, getFilePathOfObject, getTestMethodRangesFromDocument } from './alFileHelper';
 import { getALTestRunnerConfig, getCurrentWorkspaceConfig, getLaunchConfiguration, launchConfigIsValid, selectLaunchConfig, setALTestRunnerConfig, getALTestRunnerConfigKeyValue } from './config';
-import { alTestController, attachDebugger, getAppJsonKey, initDebugTest, invokeDebugTest, outputWriter, getLastResultPath, getSmbAlExtensionPath, 
+import { alTestController, attachDebugger, stopDebugger, getAppJsonKey, outputWriter, getLastResultPath, getSmbAlExtensionPath, 
     invokeTestRunnerViaHttp, getExtension, getDocumentWorkspaceFolder } from './extension';
 import { ALTestResult, ALMethod, ALFile, launchConfigValidity, CodeCoverageDisplay } from './types';
 import * as path from 'path';
 import { sendDebugEvent, sendTestDebugStartEvent, sendTestRunFinishedEvent, sendTestRunStartEvent } from './telemetry';
 import { buildTestCoverageFromTestItem } from './testCoverage';
 import { getALFilesInCoverage, getFileCoverage, getStatementCoverage, readCodeCoverage, saveAllTestsCodeCoverage, saveTestRunCoverage } from './coverage';
-import { readyToDebug } from './debug';
 import { selectBcVersionIfNotSelected } from './clientContextDllHelper';
 import * as readline from 'readline';
 import * as fs from 'fs';
@@ -343,15 +342,9 @@ export async function debugTest(filename: string, selectionStart: number) {
         selectionStart = vscode.window.activeTextEditor!.selection.start.line;
     }
 
-    const ready = await readyToDebug();
-	if (!ready) {
-		vscode.window.showErrorMessage('AL Test Runner is not ready to debug. Please check that the Test Runner Service app is installed and the testRunnerServiceUrl in config.json is correct.');
-    }
-
-    initDebugTest(filename);
-
-    await attachDebugger();
-    invokeDebugTest(filename, selectionStart);
+    await attachDebugger();    
+    await runTest(filename, selectionStart);
+    await stopDebugger();
 }
 
 function setResultForTestItem(result: testResTransform.XUnitTest, testItem: vscode.TestItem, run: vscode.TestRun) {

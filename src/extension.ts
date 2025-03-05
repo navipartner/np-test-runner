@@ -5,7 +5,8 @@ import * as types from './types';
 import { CodelensProvider } from './codelensProvider';
 import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from './coverage';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument, getALObjectOfDocument } from './alFileHelper';
-import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath, getALTestRunnerConfigKeyValue } from './config';
+import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath, getALTestRunnerConfigKeyValue, 
+	setALTestRunnerConfig, selectAttachConfig, getConfigurationsFromLaunchJsonByName } from './config';
 import { getOutputWriter, OutputWriter } from './output';
 import { createTestController, deleteTestItemForFilename, discoverTestsInDocument, discoverTestsInFileName, getTestNameFromSelectionStart } from './testController';
 import { onChangeAppFile, publishApp } from './publish';
@@ -147,7 +148,7 @@ export function activate(context: vscode.ExtensionContext) {
 	alTestController = createTestController();
 	context.subscriptions.push(alTestController);
 
-    enableCheckTestsInActiveDocuments();
+	enableCheckTestsInActiveDocuments();
 
 	startTestRunnerWebApiServerClient(context);
 }
@@ -155,8 +156,8 @@ export function activate(context: vscode.ExtensionContext) {
 async function enableCheckTestsInActiveDocuments() {
 	let analysisPromises = null;
 	vscode.window.onDidChangeVisibleTextEditors(async (editors) => {
-        analysisPromises = editors.map(editor => discoverTestsInDocument(editor.document));
-    });
+		analysisPromises = editors.map(editor => discoverTestsInDocument(editor.document));
+	});
 
 	const initialAnalysisPromises = vscode.window.visibleTextEditors.map(editor => discoverTestsInDocument(editor.document));
 
@@ -165,7 +166,7 @@ async function enableCheckTestsInActiveDocuments() {
 
 export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alProjectPath: string, smbAlExtPath: string, tests: string, extensionId: string,
 	extensionName: string, fileName: string, selectionStart: number, disabledTests?: Map<string, string>): Promise<testResTransform.TestRun[]> {
-	
+
 	sendDebugEvent('invokeTestRunner-start');
 	const config = getCurrentWorkspaceConfig();
 	getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
@@ -207,35 +208,36 @@ export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alPro
 	}
 }
 
-export function initDebugTest(filename: string) {
-	throw new Error(`Test debugging hasn't been implemented yet!`);
-}
-
-export function invokeDebugTest(filename: string, selectionStart: number) {
-	throw new Error(`Test debugging hasn't been implemented yet!`);
-}
-
 export async function attachDebugger() {
 	if (vscode.debug.activeDebugSession) {
 		return;
 	}
 
-	const attachConfigs = getDebugConfigurationsFromLaunchJson('attach');
-
-	if (attachConfigs.length === 0) {
-		vscode.window.showErrorMessage("Please define a debug configuration in launch.json before debugging tests. See [https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-attach-debug-next](https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-attach-debug-next)");
-		throw 'Please define a debug configuration in launch.json before debugging tests.';
+	const alTestRunnerConfig = getALTestRunnerConfig();
+	
+	if (alTestRunnerConfig.attachConfigName === undefined) {
+		await selectAttachConfig()
 	}
 
-	const attachConfig = attachConfigs.shift() as vscode.DebugConfiguration;
+	if (alTestRunnerConfig.attachConfigName === undefined) {
+		throw 'No attach configuration selected, without this the debugger cannot be started.';
+	}
+	
+	const attachConfig = await getConfigurationsFromLaunchJsonByName(alTestRunnerConfig.attachConfigName);
+
+	//const attachConfig = attachConfigs.shift() as vscode.DebugConfiguration;
 	await vscode.debug.startDebugging(vscode.workspace.workspaceFolders![0], attachConfig);
+}
+
+export async function stopDebugger() {
+	await vscode.debug.stopDebugging();
 }
 
 export async function getDocumentWorkspaceFolder(): Promise<string | undefined> {
 	if (testRunnerProjectRootPath !== null) {
 		return testRunnerProjectRootPath;
 	}
-	
+
 	let rootPath: string | undefined;
 
 	const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -252,23 +254,23 @@ export async function getDocumentWorkspaceFolder(): Promise<string | undefined> 
 
 	if (!rootPath) {
 		// Fall back to the first workspace folder if no active editor or workspace folder found
-		if ((workspaceFolders) && (workspaceFolders.length == 1))	{
+		if ((workspaceFolders) && (workspaceFolders.length == 1)) {
 			rootPath = workspaceFolders[0].uri.fsPath;
 		}
 	}
 
 	if (!rootPath) {
 		const folderOptions = workspaceFolders.map(folder => ({
-            label: folder.name,
-            description: folder.uri.fsPath,
-            folder: folder
-        }));
+			label: folder.name,
+			description: folder.uri.fsPath,
+			folder: folder
+		}));
 
-        await vscode.window.showQuickPick(folderOptions, {
-            placeHolder: 'Select the workspace folder to configure test runner for.',
-            canPickMany: false
-        }).then((selected) => {
-				rootPath = selected.folder.uri.fsPath;
+		await vscode.window.showQuickPick(folderOptions, {
+			placeHolder: 'Select the workspace folder to configure test runner for.',
+			canPickMany: false
+		}).then((selected) => {
+			rootPath = selected.folder.uri.fsPath;
 		});
 	}
 
@@ -280,7 +282,7 @@ export async function getDocumentWorkspaceFolder(): Promise<string | undefined> 
 	}
 }
 
-export function getSmbAlExtension() : vscode.Extension<any> {
+export function getSmbAlExtension(): vscode.Extension<any> {
 	let ext = vscode.extensions.getExtension('ms-dynamics-smb.al');
 	if (!ext) {
 		throw new Error(`Microsoft AL development extension is missing. Install this extension first.`);
@@ -288,7 +290,7 @@ export function getSmbAlExtension() : vscode.Extension<any> {
 	return ext;
 }
 
-export function getSmbAlExtensionPath() : string {
+export function getSmbAlExtensionPath(): string {
 	let ext = getSmbAlExtension();
 	return ext.extensionPath;
 }
@@ -351,7 +353,7 @@ function updateDecorations() {
 
 						if (config.highlightFailingLine) {
 							const failingLineRange = getRangeOfFailingLineFromCallstack(test.failure[0]["stack-trace"][0], test.$.method, activeEditor!.document);
-							if (failingLineRange !== undefined) {								
+							if (failingLineRange !== undefined) {
 								const decoration: vscode.DecorationOptions = { range: failingLineRange, hoverMessage: hoverMessage };
 								failingLines.push(decoration);
 							}
@@ -462,7 +464,7 @@ export function getOutputChannel() {
 }
 
 
-export function getRangeOfFailingLineFromCallstack(callstack: string, method: string, document: vscode.TextDocument): vscode.Range  {
+export function getRangeOfFailingLineFromCallstack(callstack: string, method: string, document: vscode.TextDocument): vscode.Range {
 	const methodStartLineForCallstack = getLineNumberOfMethodDeclaration(method, document);
 	if (methodStartLineForCallstack === -1) {
 		return;
@@ -525,15 +527,15 @@ export function deactivate() {
 
 	if (testRunnerSrv) {
 		testRunnerSrv.stopServer();
-	}	
- }
+	}
+}
 
-export async function invokeCommandFromAlDevExtension(command: string, params?: any[]) : Promise<unknown> {
-	var extension =  getSmbAlExtension();
+export async function invokeCommandFromAlDevExtension(command: string, params?: any[]): Promise<unknown> {
+	var extension = getSmbAlExtension();
 
 	// is the ext loaded and ready?
-	if( extension.isActive == false ){
-		await extension.activate(); 
+	if (extension.isActive == false) {
+		await extension.activate();
 	}
 
 	return vscode.commands.executeCommand(command, params);
@@ -552,52 +554,52 @@ export async function checkMissingButConfiguredClientSessionLibsAndDownload() {
 }
 
 async function checkDotNetVersion(): Promise<string> {
-    return new Promise((resolve, reject) => {
-        cp.exec('dotnet --version', (error, stdout, stderr) => {
-            if (error) {
-                reject(`Error checking .NET version: ${error.message}`);
-            } else {
-                resolve(extractSemver(stdout.trim()));
-            }
-        });
-    });
+	return new Promise((resolve, reject) => {
+		cp.exec('dotnet --version', (error, stdout, stderr) => {
+			if (error) {
+				reject(`Error checking .NET version: ${error.message}`);
+			} else {
+				resolve(extractSemver(stdout.trim()));
+			}
+		});
+	});
 }
 
 function checkAllExternalPrerequisites() {
-	
-    const requiredDotNetVersion = '8.0.0';
+
+	const requiredDotNetVersion = '8.0.0';
 
 	Promise.all([checkDotNetVersion()])
-        .then(([dotNetVersion]) => {
+		.then(([dotNetVersion]) => {
 			if (compareVersions(requiredDotNetVersion, dotNetVersion)) {
-                console.log(`.NET version ${dotNetVersion} meets the requirement.`);
-            } else {
+				console.log(`.NET version ${dotNetVersion} meets the requirement.`);
+			} else {
 				showMissingPrerequisiteErrorMessage(
-                	`.NET version ${dotNetVersion} does not meet the required version ${requiredDotNetVersion}.`,
+					`.NET version ${dotNetVersion} does not meet the required version ${requiredDotNetVersion}.`,
 					'https://dotnet.microsoft.com/en-us/download');
-            }
-        })
-        .catch(error => {
-            vscode.window.showErrorMessage(`Requirement check for .NET ${requiredDotNetVersion} and higher failed: ${error}`);
-        });
+			}
+		})
+		.catch(error => {
+			vscode.window.showErrorMessage(`Requirement check for .NET ${requiredDotNetVersion} and higher failed: ${error}`);
+		});
 }
 
 function compareVersions(requiredVersion: string, actualVersion: string): boolean {
-    return semver.gte(actualVersion, requiredVersion);
+	return semver.gte(actualVersion, requiredVersion);
 }
 
 function extractSemver(input: string): string | null {
-    const semverRegex = /\b\d+\.\d+\.\d+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?\b/;
-    const match = input.match(semverRegex);
-    return match ? match[0] : null;
+	const semverRegex = /\b\d+\.\d+\.\d+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?\b/;
+	const match = input.match(semverRegex);
+	return match ? match[0] : null;
 }
 
 function showMissingPrerequisiteErrorMessage(message: string, link: string) {
-    vscode.window.showErrorMessage(message, 'Learn More').then(selection => {
-        if (selection === 'Learn More') {
-            vscode.env.openExternal(vscode.Uri.parse(link));
-        }
-    });
+	vscode.window.showErrorMessage(message, 'Learn More').then(selection => {
+		if (selection === 'Learn More') {
+			vscode.env.openExternal(vscode.Uri.parse(link));
+		}
+	});
 }
 
 async function startTestRunnerWebApiServerClient(context: vscode.ExtensionContext) {
@@ -613,5 +615,5 @@ async function startTestRunnerWebApiServerClient(context: vscode.ExtensionContex
 }
 
 export function isWindowsPlatform(): boolean {
-    return (process.platform === 'win32');
+	return (process.platform === 'win32');
 }

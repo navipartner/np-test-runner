@@ -16,7 +16,7 @@ export class CodelensProvider implements vscode.CodeLensProvider {
             const testMethodRanges = getTestMethodRangesFromDocument(document);
             testMethodRanges.forEach(testMethodRange => {
                 this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Run Test", command: "npaltestrunner.runTest", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Run this test with NP AL Test Runner" }));
-                //this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Debug Test", command: "npaltestrunner.debugTest", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Debug this test with NP AL Test Runner" }));
+                this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Debug Test", command: "npaltestrunner.debugTest", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Debug this test with NP AL Test Runner" }));
                 this.codeLenses.push(new vscode.CodeLens(testMethodRange.range, { title: "Run Test Workflow", command: "npaltestrunner.runSelectedWorkflow", arguments: [document.fileName, testMethodRange.range.start.line], tooltip: "Start NP AL Test Runner Workflow" }));
             });
 
