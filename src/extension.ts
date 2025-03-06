@@ -215,12 +215,12 @@ export async function attachDebugger() {
 
 	let alTestRunnerConfig = getALTestRunnerConfig();
 	
-	if (alTestRunnerConfig.attachConfigName === undefined) {
+	if ((alTestRunnerConfig.attachConfigName === undefined) || (alTestRunnerConfig.attachConfigName.trim() === '')) {
 		await selectAttachConfig()
 		alTestRunnerConfig = getALTestRunnerConfig();
 	}
 
-	if (alTestRunnerConfig.attachConfigName === undefined) {
+	if ((alTestRunnerConfig.attachConfigName === undefined) || (alTestRunnerConfig.attachConfigName.trim() === '')) {
 		throw 'No attach configuration selected, without this the debugger cannot be started.';
 	}
 	

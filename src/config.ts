@@ -154,12 +154,25 @@ export async function selectAttachConfig() {
 	sendDebugEvent('selectAttachConfig-start');
 
 	let debugConfigurations = getDebugConfigurationsFromLaunchJson('attach');
-	let selectedConfig;
+	let selectedConfig = '';
+
+	if (debugConfigurations.length === 0) {
+		return;
+	}
 
 	if (debugConfigurations.length === 1) {
-		selectedConfig = debugConfigurations.shift()!.name;
+		
+		const testRunnerConfig = getALTestRunnerConfig();
+		if (testRunnerConfig.launchConfigName !== undefined && testRunnerConfig.launchConfigName !== '') {
+			const launchConfigLaunch = await getConfigurationsFromLaunchJsonByName(testRunnerConfig.launchConfigName);
+			const selectedAttachConfig = debugConfigurations.filter(element => (element.server === launchConfigLaunch.server) && (element.port === launchConfigLaunch.port)).shift();
+			if (selectedAttachConfig) {
+				selectedConfig = selectedAttachConfig.name;
+			}
+		}
 	}
-	else if (debugConfigurations.length > 1) {
+
+	if (selectedConfig === null || selectedConfig === '') {
 		let configNames: Array<string> = debugConfigurations.map(element => element.name);
 		selectedConfig = await vscode.window.showQuickPick(configNames, { canPickMany: false, placeHolder: 'Please select a configuration to debug tests against' });
 	}
