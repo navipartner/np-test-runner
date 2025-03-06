@@ -9,11 +9,11 @@ namespace NaviPartner.ALTestRunner
 {
     public class ClientContext : IDisposable
     {
-        protected ClientSession ClientSession { get; private set; }
-        protected string Culture { get; private set; }
+        protected ClientSession ClientSession { get; private set; } = null!;
+        protected string Culture { get; private set; } = "";
         internal ClientLogicalForm? OpenedForm { get; private set; } = null;
         protected string OpenedFormName { get; private set; } = "";
-        private ClientLogicalForm PsTestRunnerCaughtForm;
+        private ClientLogicalForm PsTestRunnerCaughtForm = null!;
         protected bool IgnoreErrors { get; private set; } = true;
         
         public ClientContext(string serviceUrl, AuthenticationScheme authenticationScheme, ICredentials credential,
@@ -52,35 +52,37 @@ namespace NaviPartner.ALTestRunner
             }
 
             var addressUri = new Uri(clientServicesUrl);
-            var jsonClient = new JsonHttpClient(addressUri, credential, authenticationScheme);
-
-            var httpClientField = typeof(JsonHttpClient).GetField("httpClient", BindingFlags.NonPublic | BindingFlags.Instance);
-            var httpClient = (HttpClient)httpClientField.GetValue(jsonClient);
+            var jsonClient = new JsonHttpClient(addressUri, credential, authenticationScheme) ?? throw new Exception("Can't create JsonHttpClient");
+            var httpClientField = typeof(JsonHttpClient).GetField("httpClient", BindingFlags.NonPublic | BindingFlags.Instance) ?? throw new Exception("httpClientField is null");
+            
+            var httpClient = httpClientField.GetValue(jsonClient) as HttpClient ?? throw new Exception("httpClient is null");
             httpClient.Timeout = interactionTimeout;
 
-
-            this.ClientSession = new ClientSession(jsonClient, new NonDispatcher(), new TimerFactory<TaskTimer>());
-            this.Culture = culture;
-            this.OpenSession();
+            ClientSession = new ClientSession(jsonClient, new NonDispatcher(), new TimerFactory<TaskTimer>());
+            Culture = culture;
+            
+            OpenSession();
         }
 
         protected void OpenSession()
         {
-            var csParams = new ClientSessionParameters();
-            csParams.CultureId = Culture;
-            csParams.UICultureId = Culture;
+            var csParams = new ClientSessionParameters
+            {
+                CultureId = Culture,
+                UICultureId = Culture
+            };
             csParams.AdditionalSettings.Add("IncludeControlIdentifier", true);
 
-            this.ClientSession.MessageToShow += Cs_MessageToShow;
-            this.ClientSession.CommunicationError += Cs_CommunicationError;
-            this.ClientSession.UnhandledException += Cs_UnhandledException;
-            this.ClientSession.InvalidCredentialsError += Cs_InvalidCredentialsError;
-            this.ClientSession.UriToShow += Cs_UriToShow;
-            this.ClientSession.DialogToShow += Cs_DialogToShow;
+            ClientSession.MessageToShow += Cs_MessageToShow;
+            ClientSession.CommunicationError += Cs_CommunicationError;
+            ClientSession.UnhandledException += Cs_UnhandledException;
+            ClientSession.InvalidCredentialsError += Cs_InvalidCredentialsError;
+            ClientSession.UriToShow += Cs_UriToShow;
+            ClientSession.DialogToShow += Cs_DialogToShow;
 
-            this.ClientSession.SessionReady += ClientSession_SessionReady;
-            this.ClientSession.OpenSessionAsync(csParams);
-            this.AwaitState(ClientSessionState.Ready);
+            ClientSession.SessionReady += ClientSession_SessionReady;
+            ClientSession.OpenSessionAsync(csParams);
+            AwaitState(ClientSessionState.Ready);
         }
 
         public virtual void CloseSession()
@@ -104,17 +106,17 @@ namespace NaviPartner.ALTestRunner
 
         public void SetIgnoreServerErrors(bool ignoreServerErrors)
         {
-            this.IgnoreErrors = ignoreServerErrors;
+            IgnoreErrors = ignoreServerErrors;
         }
 
         protected void AwaitState(ClientSessionState state)
         {
-            while (this.ClientSession.State != state)
+            while (ClientSession.State != state)
             {
                 Thread.Sleep(100);
                 string exceptionMessage = "";
 
-                switch (this.ClientSession.State)
+                switch (ClientSession.State)
                 {
                     case ClientSessionState.InError:
                     exceptionMessage = "ClientSession in Error state";
@@ -132,7 +134,7 @@ namespace NaviPartner.ALTestRunner
                     // ClientSession.LastException is present on the latest versions, not for BC 17 and maybe some highers too.
                     string lastExceptionDetails = "";
 
-                    dynamic session = this.ClientSession;
+                    dynamic session = ClientSession;
                     if (HasProperty(session, "LastException"))
                     {
                     if (session.LastException != null)
@@ -171,7 +173,7 @@ namespace NaviPartner.ALTestRunner
         {
             if (OpenedForm != null)
             {
-                this.InvokeInteraction(new CloseFormInteraction(OpenedForm));
+                InvokeInteraction(new CloseFormInteraction(OpenedForm));
 
                 OpenedForm = null;
                 OpenedFormName = "";
@@ -185,7 +187,7 @@ namespace NaviPartner.ALTestRunner
                 return;
             }
 
-            this.InvokeInteraction(new CloseFormInteraction(form));
+            InvokeInteraction(new CloseFormInteraction(form));
 
             if ((OpenedForm != null) && (form.Name == OpenedForm.Name))
             {
@@ -196,26 +198,26 @@ namespace NaviPartner.ALTestRunner
 
         public ClientLogicalForm[] GetAllForms()
         {
-            return this.ClientSession.OpenedForms.ToArray<ClientLogicalForm>();
+            return ClientSession.OpenedForms.ToArray<ClientLogicalForm>();
         }
 
         public void InvokeInteraction(ClientInteraction interaction)
         {
-            this.ClientSession.InvokeInteractionAsync(interaction);
-            this.AwaitState(ClientSessionState.Ready);
+            ClientSession.InvokeInteractionAsync(interaction);
+            AwaitState(ClientSessionState.Ready);
         }
 
         public ClientLogicalForm InvokeInteractionAndCatchForm(ClientInteraction interaction)
         {
-            PsTestRunnerCaughtForm = null;
-            this.ClientSession.FormToShow += ClientSession_FormToShow;
+            PsTestRunnerCaughtForm = null!;
+            ClientSession.FormToShow += ClientSession_FormToShow;
 
             try
             {
-                this.InvokeInteraction(interaction);                
+                InvokeInteraction(interaction);                
 
                 if (PsTestRunnerCaughtForm == null) {
-                    this.CloseAllWarningForms();
+                    CloseAllWarningForms();
                 }
             }
             catch (Exception ex)
@@ -226,24 +228,20 @@ namespace NaviPartner.ALTestRunner
             }
             finally
             {
-                this.ClientSession.FormToShow -= ClientSession_FormToShow;
+                ClientSession.FormToShow -= ClientSession_FormToShow;
             }
 
             var form = PsTestRunnerCaughtForm;
-            PsTestRunnerCaughtForm = null;
+            PsTestRunnerCaughtForm = null!;
+            
             return form;
-        }
-
-        public ClientLogicalForm InvokeActionAndCatchForm(ClientActionControl action)
-        {
-            return this.InvokeInteractionAndCatchForm(new InvokeActionInteraction(action));
         }
 
         public void CloseAllForms()
         {
-            foreach (var form in this.GetAllForms())
+            foreach (var form in GetAllForms())
             {
-                this.CloseForm(form);
+                CloseForm(form);
             }
 
             OpenedForm = null;
@@ -252,21 +250,21 @@ namespace NaviPartner.ALTestRunner
 
         public void CloseAllErrorForms()
         {
-            foreach (var form in this.GetAllForms())
+            foreach (var form in GetAllForms())
             {
                 if (form.ControlIdentifier == "00000000-0000-0000-0800-0000836bd2d2")
                 {
-                    this.CloseForm(form);
+                    CloseForm(form);
                 }
             }
         }
         
         public void CloseAllWarningForms()
         {
-            foreach (var form in this.GetAllForms())
+            foreach (var form in GetAllForms())
             {
                 if (form.ControlIdentifier == "00000000-0000-0000-0300-0000836bd2d2") {
-                    this.CloseForm(form);
+                    CloseForm(form);
                 }
             }
         }
@@ -276,19 +274,19 @@ namespace NaviPartner.ALTestRunner
             return control.ContainedControls.Where(clc => (clc.Name == name)).First();
         }
 
-        public ClientLogicalControl GetControlByCaption(ClientLogicalControl control, string caption)
+        public static ClientLogicalControl? GetControlByCaption(ClientLogicalControl control, string caption)
         {
             return control.ContainedControls.FirstOrDefault(clc => clc.Caption?.Replace("&", "") == caption);
         }
-
-        public ClientLogicalControl GetControlByType(ClientLogicalControl control, Type type)
+        
+        public static ClientLogicalControl? GetControlByType(ClientLogicalControl control, Type type)
         {
             return control.ContainedControls.FirstOrDefault(clc => type.IsInstanceOfType(clc));
         }
 
         public void SaveValue(ClientLogicalControl control, string newValue)
         {
-            this.InvokeInteraction(new SaveValueInteraction(control, newValue));
+            InvokeInteraction(new SaveValueInteraction(control, newValue));
         }
 
         public ClientActionControl GetActionByName(ClientLogicalControl control, string name)
@@ -296,9 +294,9 @@ namespace NaviPartner.ALTestRunner
             return (ClientActionControl)control.ContainedControls.Where(c => (c.GetType() == typeof(ClientActionControl)) && c.Name == name).First();
         }
 
-        public ClientActionControl GetActionByCaption(ClientLogicalControl control, string caption)
+        public ClientActionControl? GetActionByCaption(ClientLogicalControl control, string caption)
         {
-            return (ClientActionControl)control.ContainedControls
+            return (ClientActionControl?)control.ContainedControls
                 .Where(c => c is ClientActionControl && ((ClientActionControl)c).Caption?.Replace("&", "") == caption)
                 .FirstOrDefault();
         }
@@ -310,18 +308,18 @@ namespace NaviPartner.ALTestRunner
 
         public void ScrollRepeater(ClientRepeaterControl repeater, int by)
         {
-            this.InvokeInteraction(new ScrollRepeaterInteraction(repeater, by));
+            InvokeInteraction(new ScrollRepeaterInteraction(repeater, by));
         }
 
         public void ActivateControl(ClientLogicalControl control)
         {
-            this.InvokeInteraction(new ActivateControlInteraction(control));
+            InvokeInteraction(new ActivateControlInteraction(control));
         }
 
         public string GetErrorFromErrorForm()
         {
             string errorText = "";
-            foreach (var form in this.ClientSession.OpenedForms)
+            foreach (var form in ClientSession.OpenedForms)
             {
                 if (form.ControlIdentifier == "00000000-0000-0000-0800-0000836bd2d2")
                 {
@@ -338,7 +336,7 @@ namespace NaviPartner.ALTestRunner
         public string GetWarningFromWarningForm()
         {
             string warningText = "";
-            foreach (var form in this.ClientSession.OpenedForms)
+            foreach (var form in ClientSession.OpenedForms)
             {
                 if (form.ControlIdentifier == "00000000-0000-0000-0300-0000836bd2d2")
                 {
@@ -489,7 +487,7 @@ namespace NaviPartner.ALTestRunner
         private void HandleClientSessionError(string errorMsg, bool? throwError)
         {
             Console.WriteLine($"ERROR: {errorMsg}");
-            if (throwError == true || (!this.IgnoreErrors && throwError != false))
+            if (throwError == true || (!IgnoreErrors && throwError != false))
             {
                 throw new Exception(errorMsg);
             }
@@ -512,13 +510,6 @@ namespace NaviPartner.ALTestRunner
             if (obj == null) return false;
 
             return obj.GetType().GetProperty(propertyName) != null;
-        }
-
-        public static object GetProperty(object obj, string propertyName)
-        {
-            if (obj == null) return false;
-
-            return obj.GetType().GetProperty(propertyName).GetValue(obj);
         }
     }
 }
