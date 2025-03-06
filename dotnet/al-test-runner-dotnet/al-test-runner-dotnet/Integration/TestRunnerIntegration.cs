@@ -422,17 +422,8 @@ namespace NaviPartner.ALTestRunner.Integration
                         if (string.IsNullOrEmpty(launchConfiguration.ServerInstance))
                             throw new InvalidOperationException("Server instance is missing in the launch configuration.");
 
-                        url = $"{launchConfiguration.Server.TrimEnd('/')}:{launchConfiguration.Port}";
-
-                        try
-                        {
-                            url = new Uri(url).AbsoluteUri.TrimEnd('/').ToString();
-                        }
-                        catch (UriFormatException ex)
-                        {
-                            throw new FormatException($"Invalid server URL format: {url}", ex);
-                        }
-
+                        url = $"{launchConfiguration.Server.TrimEnd('/')}(?::\\d+)?";
+                        
                         // Append ".?" and "_serverInstance"
                         url = $"{url}.?_{launchConfiguration.ServerInstance}";
 
