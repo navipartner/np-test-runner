@@ -211,7 +211,8 @@ namespace NaviPartner.ALTestRunner.Integration
                     {
                         case EnvironmentType.OnPrem:
                             var serviceUrlCredCacheKey = GetServiceUrlCredentialCacheKey(DefaultLaunchConfig).ToLower();
-                            creds = GetNavUserPasswordCredentials(smbAlExtPath, serviceUrlCredCacheKey);
+                            var serviceUrlCredCacheKeyWithoutPort = GetServiceUrlCredentialCacheKey(DefaultLaunchConfig, true).ToLower();
+                            creds = GetNavUserPasswordCredentials(smbAlExtPath, serviceUrlCredCacheKey, serviceUrlCredCacheKeyWithoutPort);
                             authScheme = BCAuthScheme.UserNamePassword;
                             break;
                         case EnvironmentType.Sandbox:
@@ -241,7 +242,7 @@ namespace NaviPartner.ALTestRunner.Integration
             }
         }
 
-        private NetworkCredential GetNavUserPasswordCredentials(string smbAlExtPath, string webClientUrl)
+        private NetworkCredential GetNavUserPasswordCredentials(string smbAlExtPath, string webClientUrl, string webClientUrlWithoutPort)
         {
             try
             {
@@ -256,7 +257,15 @@ namespace NaviPartner.ALTestRunner.Integration
                 var matchingEntries = creds.Where(entry => regex.IsMatch(entry.Key)).ToList();
 
                 if (!matchingEntries.Any())
-                    throw new KeyNotFoundException($"No matching credential found for URL pattern: {webClientUrl}");
+                {
+                    regex = new Regex(webClientUrlWithoutPort);
+                    matchingEntries = creds.Where(entry => regex.IsMatch(entry.Key)).ToList();
+                }
+
+                if (!matchingEntries.Any())
+                {
+                    throw new KeyNotFoundException($"No matching credential found for URL patterns: {webClientUrl}, {webClientUrlWithoutPort}");
+                }
 
                 var matchingEntry = matchingEntries.First();
 
@@ -401,7 +410,7 @@ namespace NaviPartner.ALTestRunner.Integration
             }
         }
 
-        internal string GetServiceUrlCredentialCacheKey(LaunchConfiguration launchConfiguration)
+        internal string GetServiceUrlCredentialCacheKey(LaunchConfiguration launchConfiguration, Boolean? ignorePort = false)
         {
             if (launchConfiguration == null)
                 throw new ArgumentNullException(nameof(launchConfiguration));
@@ -422,7 +431,13 @@ namespace NaviPartner.ALTestRunner.Integration
                         if (string.IsNullOrEmpty(launchConfiguration.ServerInstance))
                             throw new InvalidOperationException("Server instance is missing in the launch configuration.");
 
-                        url = $"{launchConfiguration.Server.TrimEnd('/')}(?::\\d+)?";
+                        if (ignorePort == true)
+                        {
+                            url = $"{launchConfiguration.Server.TrimEnd('/')}(?::\\d+)?";
+                        } else
+                        {
+                            url = $"{launchConfiguration.Server.TrimEnd('/')}:{launchConfiguration.Port}";
+                        }
                         
                         // Append ".?" and "_serverInstance"
                         url = $"{url}.?_{launchConfiguration.ServerInstance}";
