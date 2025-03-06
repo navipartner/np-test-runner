@@ -9,13 +9,13 @@ import * as http from 'http';
 
 export class TestRunnerWebApiServer {
     private serverProcess: cp.ChildProcess | null = null;
-    private _port: number = 0; 
+    private _port: number = 0;
     public get port(): number { return this._port; }
     private isDevelopment: boolean = false;
     private serverStartTimeout: NodeJS.Timeout | null = null;
     private _serverHealthCheckOkay: boolean = false;
 
-    public get IsRunning(): boolean {        
+    public get IsRunning(): boolean {
         return this.serverProcess !== null && !this.serverProcess.killed && this._serverHealthCheckOkay;
     }
 
@@ -47,7 +47,7 @@ export class TestRunnerWebApiServer {
         }
 
         try {
-            this._port = await this.GetLowestFreePort(60995, 65535);
+            this._port = await this.findFreePort(60995, 65535);
             ext.writeToOutputChannel(`Starting server on port ${this._port}`);
 
             let stdoutData = '';
@@ -106,12 +106,12 @@ export class TestRunnerWebApiServer {
         return new Promise((resolve) => {
             const startTime = Date.now();
             const healthCheckInterval = 500; // Check every 500ms
-            
+
             const checkServerHealth = async () => {
                 try {
                     // Try to connect to the server
                     this._serverHealthCheckOkay = await this.isServerResponding();
-                    
+
                     if (this._serverHealthCheckOkay) {
                         ext.writeToOutputChannel(`${serverName} is now responding on port ${this._port}`);
                         ext.writeToOutputChannel(`${serverName} started successfully`);
@@ -123,7 +123,7 @@ export class TestRunnerWebApiServer {
                     // Connection failed, server might still be starting:
                     ext.writeToOutputChannel(`Health check failed: ${error instanceof Error ? error.message : String(error)}`);
                 }
-                
+
                 // Check if we've exceeded the timeout:
                 if (Date.now() - startTime > timeout) {
                     ext.writeToOutputChannel(`Timed out waiting for ${serverName} to start`);
@@ -132,11 +132,11 @@ export class TestRunnerWebApiServer {
                     resolve(false);
                     return;
                 }
-                
+
                 // Schedule another check:
                 this.serverStartTimeout = setTimeout(checkServerHealth, healthCheckInterval);
             };
-            
+
             // Start the health check process:
             checkServerHealth();
         });
@@ -152,13 +152,13 @@ export class TestRunnerWebApiServer {
                 resolve(true);
                 res.resume();
             });
-            
+
             req.on('error', (err) => {
                 // Connection error, server not ready:
                 ext.writeToOutputChannel(`Health check error: ${err.message}`);
                 resolve(false);
             });
-            
+
             req.on('timeout', () => {
                 ext.writeToOutputChannel('Health check timed out');
                 req.destroy();
@@ -171,13 +171,13 @@ export class TestRunnerWebApiServer {
         if (!this.serverProcess) {
             return;
         }
-        
+
         // Clear any pending timeouts
         if (this.serverStartTimeout) {
             clearTimeout(this.serverStartTimeout);
             this.serverStartTimeout = null;
         }
-        
+
         return new Promise((resolve) => {
             // Set a timeout to force kill if graceful shutdown takes too long
             const forceKillTimeout = setTimeout(() => {
@@ -192,7 +192,7 @@ export class TestRunnerWebApiServer {
                     resolve();
                 }
             }, 5000);
-            
+
             if (this.serverProcess) {
                 this.serverProcess.once('exit', () => {
                     clearTimeout(forceKillTimeout);
@@ -200,7 +200,7 @@ export class TestRunnerWebApiServer {
                     ext.writeToOutputChannel('Server process terminated gracefully');
                     resolve();
                 });
-                
+
                 // Try graceful termination first
                 try {
                     this.serverProcess.kill('SIGTERM');
@@ -226,38 +226,78 @@ export class TestRunnerWebApiServer {
     }
 
     private async findFreePort(startPort: number, endPort: number): Promise<number> {
-        return new Promise((resolve, reject) => {
-            let port = startPort;
+        const isPortAvailable = (port: number): Promise<boolean> => {
+            return new Promise((resolve) => {
+                const socket = new net.Socket();
+                
+                // Connection times out test (port should be available):
+                const timeout = setTimeout(() => {
+                    socket.destroy();
+                    resolve(true);
+                }, 300);
+                
+                // Port in use test (connection successful):
+                socket.connect(port, '127.0.0.1', () => {
+                    clearTimeout(timeout);
+                    socket.destroy();
+                    resolve(false);
+                });
+                
+                // Connection refused => the port should be available:
+                socket.on('error', (err) => {
+                    clearTimeout(timeout);
+                    socket.destroy();
+                    resolve(true);
+                });
+            });
+        };
+        
+        // Try ports sequentially with double verification
+        for (let port = startPort; port <= endPort; port++) {
+            // First check: Is the port available?
+            const available = await isPortAvailable(port);
+            if (!available) continue;
             
-            function tryPort(currentPort: number) {
+            // Second check: Can we actually bind to this port?
+            try {
                 const server = net.createServer();
-                server.listen(currentPort, () => {
-                    server.once('close', () => {
-                        resolve(currentPort);
+                const canBind = await new Promise<boolean>((resolve) => {
+                    server.once('error', () => {
+                        server.removeAllListeners();
+                        try { server.close(); } catch (e) {}
+                        resolve(false);
                     });
-                    server.close();
+                    
+                    server.once('listening', () => {
+                        server.removeAllListeners();
+                        server.close();
+                        resolve(true);
+                    });
+                    
+                    // Try to bind with timeout:
+                    const timeout = setTimeout(() => {
+                        server.removeAllListeners();
+                        try { server.close(); } catch (e) {}
+                        resolve(false);
+                    }, 300);
+                    
+                    server.listen(port, '127.0.0.1')
+                        .once('listening', () => clearTimeout(timeout));
                 });
-                server.on('error', () => {
-                    if (currentPort < endPort) {
-                        tryPort(currentPort + 1);
-                    } else {
-                        reject(new Error('No free port found'));
+                
+                if (canBind) {
+                    // Do a final verification:
+                    const finalCheck = await isPortAvailable(port);
+                    if (finalCheck) {
+                        return port;
                     }
-                });
+                }
+            } catch (err) {
+                // In case of any error, let's consider this port unavailable:
+                continue;
             }
-            
-            tryPort(port);
-        });
-    }
-
-    private async GetLowestFreePort(startPort: number = 60995, endPort: number = 65535): Promise<number> {
-        try {
-            const port = await this.findFreePort(startPort, endPort);
-            ext.writeToOutputChannel(`Found free port: ${port}`);
-            return port;
-        } catch (error) {
-            ext.writeToOutputChannel(`Error finding free port: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
         }
+        
+        throw new Error(`No free port found in range ${startPort}-${endPort}`);
     }
 }
