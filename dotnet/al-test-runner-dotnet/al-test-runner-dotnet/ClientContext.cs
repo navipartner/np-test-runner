@@ -158,6 +158,10 @@ namespace NaviPartner.ALTestRunner
                 var interaction = new OpenFormInteraction();
                 interaction.Page = page.ToString();
                 OpenedForm = InvokeInteractionAndCatchForm(interaction);
+                if (OpenedForm == null)
+                {
+                    throw new Exception($"Form for interaction '{interaction}' not found");
+                }
                 OpenedFormName = OpenedForm.Name;
             }
             return OpenedForm;
