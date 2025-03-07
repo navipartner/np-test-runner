@@ -1,28 +1,54 @@
 # NaviPartner AL Test Runner
 
-NaviPartner AL Test Runner is based on [James Pearsons`s AL Test Runner](https://github.com/jimmymcp/al-test-runner). It intends to leverage the existing foundation providing great integration with VS Code environment, mainly everything that is AL development related:
+A simple-to-use and efficient test runner for AL development in Business Central.
 
-- Run tests
-- Debug tests
-- Enable code coverage to see which lines are covered by your tests
-- See which tests call methods in your codeunits and tables
+## What it does
 
+NaviPartner AL Test Runner makes it easy to:
 
-At the same time, the new version tries to cover more scenarios and also simplify the overall concept. The main changes are:
+- Run tests directly from VS Code
+- Debug tests seamlessly
+- Work with any Business Central environment (containers, SaaS, or on-premises, localhost)
 
- - Possibility to invoke tests against any NST running basically anywhere. Main reason we needed a new tool was fact, we don't run containers locally but we use orchestrator. And BcContainerHelper doesn't support these environments, unfortunately. So the original AL test runner doesn't allow us to run tests against our containers either.
- - Because we use direct approach via Client Session (which uses connection via standard web interface) we remove [BcContainerHelper](https://github.com/microsoft/navcontainerhelper) from the project. It's not essentially necessary to run the extension.
- - As a part of the flexibility this version offers also possiblity to run tests against SaaS Sandboxes. This approach doesn't require any proxy container.
- - We try to simplify configurations and reused the benefits of the built-in credential cache provided by [AL Language extension for Microsoft Dynamics 365 Business Central](https://marketplace.visualstudio.com/items?itemName=ms-dynamics-smb.al). This means users don't have to keep credentials in a separate configuration file, authentications happens automatically once they were authenticated during AL development.
+## Why use it?
 
+- **Works with any environment** - Run tests against any NST instance regardless of where it's hosted
+- **Simplified setup** - Minimal configuration required
+- **Seamless integration** - Uses your existing AL extension credentials
+- **Native debugging** - Debug tests directly without workarounds
 
 ## Requirements
-- A Business Central Docker container that you can publish your extension into and run your tests against. As of v0.2.0, Docker can either be running locally or on a remote server. If remote, you must be able to execute PowerShell commands against the host with ps-remoting.
-- Alternatively you can use VS Code remote development to execute local PowerShell commands on the host with this extension installed on the host 
+
+- [VS Code](https://code.visualstudio.com/)
+- [AL Language extension](https://marketplace.visualstudio.com/items?itemName=ms-dynamics-smb.al)
 - [PWSH 7.0 or higher](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.4#installing-the-msi-package)
-- [AL Language extension](https://marketplace.visualstudio.com/items?itemName=ms-dynamics-smb.al) for VS Code
+- Access to a Business Central environment
+- BC25 and higher for native debugging experience (otherwise, debugging isn't possible)
+
+## Features
+
+- **Run individual tests** or entire test codeunits
+- **Debug tests** with full debugging capabilities
+- **SaaS support** - Works with Business Central online sandboxes
+- **Flexible connectivity** - Connect to any NST instance regardless of hosting method
 
 
-## Credits
+## Getting Started
 
-We reuse huge part of the work provided by [James Pearson](https://github.com/jimmymcp) in his [AL Test Runner](https://github.com/jimmymcp/al-test-runner) project. So kudos to James for all the energy he put to the project, he crafted the only AL oriented test runner tool available on the market these days.
+1. Install the extension from the VS Code marketplace
+2. Open your AL project in VS Code
+3. Make sure `launch.json` contains:  
+   - `launch` configuration and you can download symbols and/or publish the app. This is essential.
+   - `attach` configuration if you want to debug your tests. The `attach` configuration must contain `"breakOnNext": "ClientService"` which is valid for BC25 and higher versions.
+   ![launch.json example](.\media\image.png)
+4. Authenticate against NST (download symbols or publish the app).
+5. Right-click on a test codeunit or test method
+6. Select "Run Test" or "Debug Test".
+7. You will be asked to provide the following details:
+    - Select a `launch` configuration if you have more than one in your `launch.json`.
+    - Select an `attach` configuration if you decide to debug and have more than one in the `launch.json`.
+    - Select BC version so the test runner can download missing libraries (from the official artifact storage).
+
+No additional configuration needed! The extension automatically uses your existing AL credentials.
+
+![Test runner workflow](.\media\NaviPartner-AL-Test-Runner.gif)
