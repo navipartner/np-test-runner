@@ -40,7 +40,7 @@ NaviPartner AL Test Runner makes it easy to:
 3. Make sure `launch.json` contains:  
    - `launch` configuration and you can download symbols and/or publish the app. This is essential.
    - `attach` configuration if you want to debug your tests. The `attach` configuration must contain `"breakOnNext": "ClientService"` which is valid for BC25 and higher versions.
-   ![launch.json example](.\media\image.png)
+   ![launch.json example](./media/image.png)
 4. Authenticate against NST (download symbols or publish the app).
 5. Right-click on a test codeunit or test method
 6. Select "Run Test" or "Debug Test".
@@ -51,4 +51,4 @@ NaviPartner AL Test Runner makes it easy to:
 
 No additional configuration needed! The extension automatically uses your existing AL credentials.
 
-![Test runner workflow](.\media\NaviPartner-AL-Test-Runner.gif)
+![Test runner workflow](./media/NaviPartner-AL-Test-Runner.gif)
