@@ -14,11 +14,13 @@ readTestCoverage();
 
 export async function buildTestCoverageFromTestItem(testItem: vscode.TestItem): Promise<void> {
     return new Promise(async resolve => {
-        const testMethod: ALMethod = { objectName: testItem.parent!.label, methodName: testItem.label };
-        const codeCoverage = await readCodeCoverage();
-        buildTestCoverage(codeCoverage, testMethod).then(newCoverage => {
-            writeTestCoverage(testMethod, newCoverage);
-        });
+        if ((testItem !== undefined) && (testItem.parent !== undefined) && (testItem.label !== undefined)) {
+            const testMethod: ALMethod = { objectName: testItem.parent!.label, methodName: testItem.label };
+            const codeCoverage = await readCodeCoverage();
+            buildTestCoverage(codeCoverage, testMethod).then(newCoverage => {
+                writeTestCoverage(testMethod, newCoverage);
+            });
+        }
         resolve();
     })
 }

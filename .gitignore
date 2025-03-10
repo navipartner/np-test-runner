@@ -3,3 +3,7 @@ node_modules
 .vscode-test/
 *.vsix
 .vscode/
+.altestrunner
+.npaltestrunner
+run.test.*.ps1
+*.cpuprofile

@@ -10,7 +10,7 @@ export async function showTableData() {
     let recordName = findRecordNameForVariable(wordAtCursor);
     if (recordName !== '') {
         vscode.window.showInformationMessage(`Opening browser to table ${recordName}...`);
-        let showTableDataTerminal = getALTestRunnerTerminal('al-test-runner-2');
+        let showTableDataTerminal = getALTestRunnerTerminal('np-al-test-runner-2');
         showTableDataTerminal.sendText(`cd "${getTestFolderPath()}"`);
         showTableDataTerminal.sendText(`Show-TableData '${recordName}' -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
     }

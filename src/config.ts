@@ -4,14 +4,15 @@ import { sendDebugEvent } from './telemetry';
 import * as types from './types';
 import { getTestFolderPath } from './alFileHelper';
 import { activeEditor } from './extension';
+import * as path from 'path';
 
 export function getALTestRunnerPath(): string {
-	const alTestRunnerPath = getTestFolderPath() + '\\.altestrunner';
+	const alTestRunnerPath = path.join(getTestFolderPath(), '.npaltestrunner');
 	return alTestRunnerPath;
 }
 
 export function getALTestRunnerConfigPath(): string {
-	return getALTestRunnerPath() + '\\config.json';
+	return path.join(getALTestRunnerPath(), 'config.json');
 }
 
 export function getALTestRunnerConfig() {
@@ -31,6 +32,14 @@ export function getALTestRunnerConfig() {
 	return alTestRunnerConfig as types.ALTestRunnerConfig;
 }
 
+export function getALTestRunnerConfigKeyValue(keyName: string) : string {
+	sendDebugEvent('getALTestRunnerConfigKeyValue', { keyName: keyName });
+	let config = getALTestRunnerConfig();
+	const keyValue = config[keyName];
+	sendDebugEvent('getALTestRunnerConfigKeyValue.result', { keyValue: keyValue });
+	return keyValue;
+}
+
 export function setALTestRunnerConfig(keyName: string, keyValue: string | undefined) {
 	let debugKeyValue = '';
 	if (keyValue) {
@@ -46,19 +55,12 @@ export function setALTestRunnerConfig(keyName: string, keyValue: string | undefi
 
 function createALTestRunnerConfig() {
 	let config: types.ALTestRunnerConfig = {
-		containerResultPath: "",
 		launchConfigName: "",
-		securePassword: "",
-		userName: "",
+		attachConfigName: "",
 		companyName: "",
 		testSuiteName: "",
-		vmUserName: "",
-		vmSecurePassword: "",
-		remoteContainerName: "",
-		dockerHost: "",
-		newPSSessionOptions: "",
 		testRunnerServiceUrl: "",
-		codeCoveragePath: ".//.altestrunner//codecoverage.json",
+		codeCoveragePath: ".//.npaltestrunner//codecoverage.json",
 		culture: "en-US"
 	};
 
@@ -114,6 +116,19 @@ export function getDebugConfigurationsFromLaunchJson(type: string) {
 	return debugConfigurations.filter(element => { return element.request === type; }).slice();
 }
 
+export async function getConfigurationsFromLaunchJsonByName(name: string) : Promise<vscode.DebugConfiguration> {
+	const testWorkspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(getALTestRunnerConfigPath()));
+	const configuration = vscode.workspace.getConfiguration('launch', testWorkspaceFolder);
+	const debugConfigurations = configuration.configurations as Array<vscode.DebugConfiguration>;
+	const configs = debugConfigurations.filter(element => { return element.name === name; }).slice();
+
+	if (configs.length > 0) {
+		return configs[0];
+	} else {
+		return null;
+	}
+}
+
 export function getLaunchJsonPath() {
 	return getTestFolderPath() + '\\.vscode\\launch.json';
 }
@@ -135,6 +150,36 @@ export async function selectLaunchConfig() {
 	setALTestRunnerConfig('launchConfigName', selectedConfig);
 }
 
+export async function selectAttachConfig() {
+	sendDebugEvent('selectAttachConfig-start');
+
+	let debugConfigurations = getDebugConfigurationsFromLaunchJson('attach');
+	let selectedConfig = '';
+
+	if (debugConfigurations.length === 0) {
+		return;
+	}
+
+	if (debugConfigurations.length === 1) {
+		
+		const testRunnerConfig = getALTestRunnerConfig();
+		if (testRunnerConfig.launchConfigName !== undefined && testRunnerConfig.launchConfigName !== '') {
+			const launchConfigLaunch = await getConfigurationsFromLaunchJsonByName(testRunnerConfig.launchConfigName);
+			const selectedAttachConfig = debugConfigurations.filter(element => (element.server === launchConfigLaunch.server) && (element.port === launchConfigLaunch.port)).shift();
+			if (selectedAttachConfig) {
+				selectedConfig = selectedAttachConfig.name;
+			}
+		}
+	}
+
+	if (selectedConfig === null || selectedConfig === '') {
+		let configNames: Array<string> = debugConfigurations.map(element => element.name);
+		selectedConfig = await vscode.window.showQuickPick(configNames, { canPickMany: false, placeHolder: 'Please select a configuration to debug tests against' });
+	}
+
+	setALTestRunnerConfig('attachConfigName', selectedConfig);
+}
+
 export function getCurrentWorkspaceConfig(forTestFolder: boolean = true) {
 	let testFolderPath: string | undefined;
 	if (forTestFolder) {
@@ -142,10 +187,10 @@ export function getCurrentWorkspaceConfig(forTestFolder: boolean = true) {
 	}
 
 	if (testFolderPath) {
-		return vscode.workspace.getConfiguration('al-test-runner', vscode.Uri.file(testFolderPath));
+		return vscode.workspace.getConfiguration('np-al-test-runner', vscode.Uri.file(testFolderPath));
 	}
 	else {
-		return vscode.workspace.getConfiguration('al-test-runner');
+		return vscode.workspace.getConfiguration('np-al-test-runner');
 	}
 }
 

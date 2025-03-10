@@ -72,28 +72,12 @@ export function publishApp(publishType: PublishType): Promise<PublishResult> {
     });
 }
 
-export async function publishAppFile(uri: vscode.Uri): Promise<PublishResult> {
-    return new Promise(async resolve => {
-        shouldPublishApp = false;
-        const terminal = getALTestRunnerTerminal(getTerminalName());
-        terminal.show(true);
-        terminal.sendText(' ');
-        terminal.sendText(`Publish-App -AppFile "${uri.fsPath}" -CompletionPath "${getPublishCompletionPath()}" -LaunchConfig '${getLaunchConfiguration(getALTestRunnerConfig().launchConfigName)}'`);
+export async function publishAppUsingAlCommand() {
+    return await vscode.commands.executeCommand('al.publishNoDebug');
+}
 
-        const resultExists = await awaitFileExistence(getPublishCompletionPath(), getCurrentWorkspaceConfig().publishTimeout);
-        if (resultExists) {
-            const content = readFileSync(getPublishCompletionPath(), { encoding: 'utf-8' })
-            const success = content.trim() === '1';
-            let message = '';
-            if (!success) {
-                message = content.trim();
-            }
-            resolve({ success: success, message: message });
-        }
-        else {
-            resolve({ success: false, message: failedToPublishMessage });
-        }
-    });
+export async function publishAppWithRapidUsingAlCommand() {
+    return await vscode.commands.executeCommand('al.incrementalPublishNoDebug');
 }
 
 export async function onChangeAppFile(uri: vscode.Uri) {
@@ -104,12 +88,10 @@ export async function onChangeAppFile(uri: vscode.Uri) {
     if ((uri.fsPath.indexOf('dep.app') > 0) || (uri.fsPath.indexOf('.alpackages') > 0)) {
         return;
     }
-
-    await publishAppFile(uri);
 }
 
 function getTerminalName(): string {
-    return 'al-test-runner';
+    return 'np-al-test-runner';
 }
 
 function getPublishCompletionPath(): string {

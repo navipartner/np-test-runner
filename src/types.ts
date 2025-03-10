@@ -2,16 +2,9 @@ import * as vscode from 'vscode';
 
 export type ALTestRunnerConfig = {
 	launchConfigName: string;
-	containerResultPath: string;
-	userName: string;
-	securePassword: string;
+	attachConfigName: string;
 	companyName: string;
 	testSuiteName: string;
-	vmUserName: string;
-	vmSecurePassword: string;
-	remoteContainerName: string;
-	dockerHost: string;
-	newPSSessionOptions: string;
 	testRunnerServiceUrl: string;
 	codeCoveragePath: string;
 	culture: string;
@@ -114,11 +107,6 @@ export type ALMethod = {
 	path?: string;
 }
 
-export type DisabledTest = {
-	codeunitName: string;
-	method: string;
-}
-
 export type TestCoverage = {
 	method: ALMethod;
 	testMethod: ALMethod;
@@ -139,4 +127,15 @@ export enum launchConfigValidity {
 	Valid,
 	Invalid,
 	NeverValid
+}
+
+export enum BcArtifactSource {
+	OnPrem = 'OnPrem',
+	Sandbox = 'Sandbox',
+	Insider = 'Insider'
+}
+
+export enum BcArtifactSourceEndpoint {
+	CDN = 'CDN',
+	BLOB = 'BLOB'
 }

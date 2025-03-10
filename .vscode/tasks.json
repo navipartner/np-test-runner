@@ -14,7 +14,19 @@
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			}
+			},			
+			"label": "npm: watch",
+			"detail": "tsc -watch -p ./"
+		},
+		{
+			"type": "dotnet",
+			"task": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"problemMatcher": [],
+			"label": "dotnet: build"
 		}
 	]
 }
