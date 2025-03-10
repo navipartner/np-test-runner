@@ -301,12 +301,6 @@
 						"description": "Determines where test results will be displayed",
 						"default": "Output"
 					},
-					"np-al-test-runner.publishTimeout": {
-						"type": "number",
-						"scope": "resource",
-						"description": "Timeout (milliseconds) for publishing apps",
-						"default": 20000
-					},
 					"np-al-test-runner.testWorkspaceFolderIdentifiers": {
 						"type": "array",
 						"scope": "resource",
