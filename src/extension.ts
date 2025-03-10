@@ -5,13 +5,12 @@ import * as types from './types';
 import { CodelensProvider } from './codelensProvider';
 import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from './coverage';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument, getALObjectOfDocument } from './alFileHelper';
-import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath, getALTestRunnerConfigKeyValue, 
-	setALTestRunnerConfig, selectAttachConfig, getConfigurationsFromLaunchJsonByName } from './config';
+import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getLaunchJsonPath, getALTestRunnerConfigKeyValue, 
+	selectAttachConfig, getConfigurationsFromLaunchJsonByName } from './config';
 import { getOutputWriter, OutputWriter } from './output';
 import { createTestController, deleteTestItemForFilename, discoverTestsInDocument, discoverTestsInFileName, getTestNameFromSelectionStart } from './testController';
-import { onChangeAppFile, publishApp } from './publish';
-import { awaitFileExistence } from './file';
-import { join, resolve } from 'path';
+import { onChangeAppFile } from './publish';
+import { join } from 'path';
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { createTelemetryReporter, sendDebugEvent } from './telemetry';
 import { TestCoverageCodeLensProvider } from './testCoverageCodeLensProvider';
