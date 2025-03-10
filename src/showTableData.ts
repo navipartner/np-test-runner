@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
 import { getALTestRunnerConfig, getLaunchConfiguration } from './config';
 import { activeEditor, getALTestRunnerTerminal } from './extension';
-import { sendShowTableDataEvent } from './telemetry';
 import { getTestFolderPath } from './alFileHelper';
 
 export async function showTableData() {
-    sendShowTableDataEvent();
     let wordAtCursor = getWordAtCursor();
     let recordName = findRecordNameForVariable(wordAtCursor);
     if (recordName !== '') {

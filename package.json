@@ -307,12 +307,6 @@
 						"description": "Timeout (milliseconds) for publishing apps",
 						"default": 20000
 					},
-					"np-al-test-runner.sendDebugTelemetry": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Include debug events in the telemetry to help with troubleshooting",
-						"default": false
-					},
 					"np-al-test-runner.testWorkspaceFolderIdentifiers": {
 						"type": "array",
 						"scope": "resource",
