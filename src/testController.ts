@@ -191,7 +191,6 @@ export function readyToRunTests(): Promise<Boolean> {
         if (launchConfigIsValid() == launchConfigValidity.Invalid) {
             //clear the credentials and company name if the launch config is not valid
             setALTestRunnerConfig('companyName', '');
-            //setALTestRunnerConfig('testRunnerServiceUrl', '')
             await selectLaunchConfig();
         }
 
@@ -313,7 +312,7 @@ export async function debugTestHandler(request: vscode.TestRunRequest) {
             filename = testItem.uri!.fsPath;
             lineNumber = 0;
         }
-        
+
         debugTest(filename, lineNumber);
     }
     else {

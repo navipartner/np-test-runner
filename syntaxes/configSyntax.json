@@ -20,10 +20,6 @@
             "type": "string",
             "description": "The name of test suite to execute tests in (only required in Business Central 14)"
         },
-        "testRunnerServiceUrl": {
-            "type": "string",
-            "description": "The OData endpoint to connect to the test runner service when debugging tests e.g. http://containername:7048/BC/ODataV4/TestRunner?company=My%20Company&tenant=default"
-        },
         "codeCoveragePath": {
             "type": "string",
             "description": "The path to save details of code coverage to e.g. .//.npaltestrunner//codecoverage.json"

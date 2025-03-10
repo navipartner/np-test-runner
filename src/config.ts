@@ -54,7 +54,6 @@ function createALTestRunnerConfig() {
 		attachConfigName: "",
 		companyName: "",
 		testSuiteName: "",
-		testRunnerServiceUrl: "",
 		codeCoveragePath: ".//.npaltestrunner//codecoverage.json",
 		culture: "en-US"
 	};
