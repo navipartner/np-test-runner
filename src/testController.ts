@@ -189,8 +189,6 @@ export function readyToRunTests(): Promise<Boolean> {
     return new Promise(async (resolve) => {
 
         if (launchConfigIsValid() == launchConfigValidity.Invalid) {
-            //clear the credentials and company name if the launch config is not valid
-            setALTestRunnerConfig('companyName', '');
             await selectLaunchConfig();
         }
 

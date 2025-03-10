@@ -52,7 +52,6 @@ function createALTestRunnerConfig() {
 	let config: types.ALTestRunnerConfig = {
 		launchConfigName: "",
 		attachConfigName: "",
-		companyName: "",
 		codeCoveragePath: ".//.npaltestrunner//codecoverage.json",
 		culture: "en-US"
 	};

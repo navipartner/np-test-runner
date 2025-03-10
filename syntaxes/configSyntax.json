@@ -12,10 +12,6 @@
             "type": "string",
             "description": "The name of the attach configuration to debug test against"
         },
-        "companyName": {
-            "type": "string",
-            "description": "The Business Central company to run the tests in"
-        },
         "codeCoveragePath": {
             "type": "string",
             "description": "The path to save details of code coverage to e.g. .//.npaltestrunner//codecoverage.json"
