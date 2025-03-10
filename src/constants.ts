@@ -1,2 +1,1 @@
 export const objectDeclarationRegEx: string = '(codeunit|controladdin|dotnet|entitlement|enum|interface|page|pagecustomization|permissionset|profile|query|report|requestpage|table)(extension){0,1} \\d+ .*';
-export const failedToPublishMessage: string = 'The app failed to compile or failed to publish to the container within the publishing timeout (see settings).';
