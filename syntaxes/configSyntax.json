@@ -16,10 +16,6 @@
             "type": "string",
             "description": "The Business Central company to run the tests in"
         },
-        "testSuiteName": {
-            "type": "string",
-            "description": "The name of test suite to execute tests in (only required in Business Central 14)"
-        },
         "codeCoveragePath": {
             "type": "string",
             "description": "The path to save details of code coverage to e.g. .//.npaltestrunner//codecoverage.json"

@@ -4,7 +4,6 @@ export type ALTestRunnerConfig = {
 	launchConfigName: string;
 	attachConfigName: string;
 	companyName: string;
-	testSuiteName: string;
 	codeCoveragePath: string;
 	culture: string;
 };
