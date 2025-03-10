@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { debugTestHandler, getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
-import { getALTestRunnerConfig, getALTestRunnerConfigPath, getALTestRunnerPath, getLaunchConfiguration, setALTestRunnerConfig, getCurrentWorkspaceConfig } from './config';
+import { getALTestRunnerConfig, getALTestRunnerConfigPath, getALTestRunnerPath } from './config';
 import { existsSync, readdirSync, unlinkSync } from 'fs';
 import { triggerUpdateDecorations } from './extension';
 import { downloadClientSessionLibraries } from './clientContextDllHelper';

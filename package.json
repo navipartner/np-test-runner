@@ -267,12 +267,6 @@
 						"description": "Enables CodeLens actions to run individual tests or all tests in a codeunit",
 						"default": true
 					},
-					"np-al-test-runner.testRunnerInitialisationTime": {
-						"type": "number",
-						"scope": "resource",
-						"description": "The delay (in milliseconds) to allow the test runner to initialise before attaching the debugger",
-						"default": 3000
-					},
 					"np-al-test-runner.codeCoveragePath": {
 						"type": "string",
 						"scope": "resource",
@@ -293,12 +287,6 @@
 							false
 						]
 					},
-					"np-al-test-runner.enablePerformanceProfiler": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Downloads performance profiler data for each test run.",
-						"default": false
-					},
 					"np-al-test-runner.testFolderName": {
 						"type": "string",
 						"scope": "resource",
@@ -316,7 +304,7 @@
 					"np-al-test-runner.publishTimeout": {
 						"type": "number",
 						"scope": "resource",
-						"description": "Timeout (milliseconds) for publishing apps from PowerShell",
+						"description": "Timeout (milliseconds) for publishing apps",
 						"default": 20000
 					},
 					"np-al-test-runner.sendDebugTelemetry": {
