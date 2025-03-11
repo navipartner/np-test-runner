@@ -16,7 +16,7 @@
 	"files": [
 		".bin/**"
 	],
-	"version": "0.31.0",
+	"version": "0.31.1",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -402,6 +402,7 @@
 		"@types/semver": "^7.5.8",
 		"@types/xml2js": "^0.4.9",
 		"@vscode/extension-telemetry": "0.5.0",
+		"@xmldom/xmldom": "^0.9.8",
 		"async-mutex": "^0.5.0",
 		"axios": "^1.7.2",
 		"net": "^1.0.2",
@@ -409,8 +410,7 @@
 		"sanitize-filename": "^1.6.3",
 		"semver": "^7.6.2",
 		"vscode-jsonrpc": "^8.2.1",
-		"xml2js": "^0.5.0",
-		"xmldom": "^0.6.0"
+		"xml2js": "^0.5.0"
 	},
 	"__metadata": {
 		"id": "81e06a9c-e97a-4474-b24e-a1f1c2683fe4",

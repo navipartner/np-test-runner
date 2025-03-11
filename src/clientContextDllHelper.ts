@@ -3,7 +3,7 @@ import * as types from './types';
 import * as path from 'path';
 import * as fetch from 'node-fetch'; 
 import { isWindowsPlatform, getExtension, testRunnerClient } from './extension';
-import { DOMParser } from 'xmldom';
+import { DOMParser } from '@xmldom/xmldom';
 import * as fs from 'fs';
 import { getALTestRunnerConfigKeyValue, setALTestRunnerConfig } from './config';
 import * as webApiClient from './webapiclient';
