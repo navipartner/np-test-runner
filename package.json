@@ -16,7 +16,7 @@
 	"files": [
 		".bin/**"
 	],
-	"version": "0.31.0",
+	"version": "0.31.1",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
@@ -267,12 +267,6 @@
 						"description": "Enables CodeLens actions to run individual tests or all tests in a codeunit",
 						"default": true
 					},
-					"np-al-test-runner.testRunnerInitialisationTime": {
-						"type": "number",
-						"scope": "resource",
-						"description": "The delay (in milliseconds) to allow the test runner to initialise before attaching the debugger",
-						"default": 3000
-					},
 					"np-al-test-runner.codeCoveragePath": {
 						"type": "string",
 						"scope": "resource",
@@ -293,12 +287,6 @@
 							false
 						]
 					},
-					"np-al-test-runner.enablePerformanceProfiler": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Downloads performance profiler data for each test run.",
-						"default": false
-					},
 					"np-al-test-runner.testFolderName": {
 						"type": "string",
 						"scope": "resource",
@@ -312,18 +300,6 @@
 						"scope": "resource",
 						"description": "Determines where test results will be displayed",
 						"default": "Output"
-					},
-					"np-al-test-runner.publishTimeout": {
-						"type": "number",
-						"scope": "resource",
-						"description": "Timeout (milliseconds) for publishing apps from PowerShell",
-						"default": 20000
-					},
-					"np-al-test-runner.sendDebugTelemetry": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Include debug events in the telemetry to help with troubleshooting",
-						"default": false
 					},
 					"np-al-test-runner.testWorkspaceFolderIdentifiers": {
 						"type": "array",
@@ -426,6 +402,7 @@
 		"@types/semver": "^7.5.8",
 		"@types/xml2js": "^0.4.9",
 		"@vscode/extension-telemetry": "0.5.0",
+		"@xmldom/xmldom": "^0.9.8",
 		"async-mutex": "^0.5.0",
 		"axios": "^1.7.2",
 		"net": "^1.0.2",
@@ -433,8 +410,7 @@
 		"sanitize-filename": "^1.6.3",
 		"semver": "^7.6.2",
 		"vscode-jsonrpc": "^8.2.1",
-		"xml2js": "^0.5.0",
-		"xmldom": "^0.6.0"
+		"xml2js": "^0.5.0"
 	},
 	"__metadata": {
 		"id": "81e06a9c-e97a-4474-b24e-a1f1c2683fe4",

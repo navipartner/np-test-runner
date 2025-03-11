@@ -3,9 +3,6 @@ import * as vscode from 'vscode';
 export type ALTestRunnerConfig = {
 	launchConfigName: string;
 	attachConfigName: string;
-	companyName: string;
-	testSuiteName: string;
-	testRunnerServiceUrl: string;
 	codeCoveragePath: string;
 	culture: string;
 };

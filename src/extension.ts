@@ -5,15 +5,13 @@ import * as types from './types';
 import { CodelensProvider } from './codelensProvider';
 import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from './coverage';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument, getALObjectOfDocument } from './alFileHelper';
-import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getDebugConfigurationsFromLaunchJson, getLaunchJsonPath, getALTestRunnerConfigKeyValue, 
-	setALTestRunnerConfig, selectAttachConfig, getConfigurationsFromLaunchJsonByName } from './config';
+import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getLaunchJsonPath, getALTestRunnerConfigKeyValue, 
+	selectAttachConfig, getConfigurationsFromLaunchJsonByName } from './config';
 import { getOutputWriter, OutputWriter } from './output';
 import { createTestController, deleteTestItemForFilename, discoverTestsInDocument, discoverTestsInFileName, getTestNameFromSelectionStart } from './testController';
-import { onChangeAppFile, publishApp } from './publish';
-import { awaitFileExistence } from './file';
-import { join, resolve } from 'path';
+import { onChangeAppFile } from './publish';
+import { join } from 'path';
 import TelemetryReporter from '@vscode/extension-telemetry';
-import { createTelemetryReporter, sendDebugEvent } from './telemetry';
 import { TestCoverageCodeLensProvider } from './testCoverageCodeLensProvider';
 import { CodeCoverageCodeLensProvider } from './codeCoverageCodeLensProvider';
 import { registerCommands } from './commands';
@@ -142,7 +140,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	createHEADFileWatcherForTestWorkspaceFolder();
 
-	telemetryReporter = createTelemetryReporter();
 	context.subscriptions.push(telemetryReporter);
 
 	alTestController = createTestController();
@@ -167,7 +164,6 @@ async function enableCheckTestsInActiveDocuments() {
 export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alProjectPath: string, smbAlExtPath: string, tests: string, extensionId: string,
 	extensionName: string, fileName: string, selectionStart: number, disabledTests?: Map<string, string>): Promise<testResTransform.TestRun[]> {
 
-	sendDebugEvent('invokeTestRunner-start');
 	const config = getCurrentWorkspaceConfig();
 	getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
 	let publishType: types.PublishType = types.PublishType.None;
@@ -424,7 +420,6 @@ export function getTerminalName() {
 }
 
 export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
-	sendDebugEvent('getALTestRunnerTerminal-start', { terminalName: terminalName });
 	let terminals = vscode.window.terminals.filter(element => element.name === terminalName);
 	let terminal;
 	if (terminals) {
@@ -432,7 +427,6 @@ export function getALTestRunnerTerminal(terminalName: string): vscode.Terminal {
 	}
 
 	if (!terminal) {
-		sendDebugEvent('getALTestRunnerTerminal-createTerminal', { terminalName: terminalName });
 		terminal = vscode.window.createTerminal(terminalName);
 	}
 
@@ -452,7 +446,6 @@ export function getExtension() {
 }
 
 export function writeToOutputChannel(value: string) {
-	sendDebugEvent('writeToOutputChannel-start');
 	if (!debugChannel) {
 		debugChannel = vscode.window.createOutputChannel(getOutputChannel());
 	}
@@ -505,14 +498,12 @@ export function getLaunchJson() {
 }
 
 export function getAppJsonKey(keyName: string) {
-	sendDebugEvent('getAppJsonKey-start', { keyName: keyName });
 	const appJsonPath = path.join(getTestFolderPath(), 'app.json');
 	const data = fs.readFileSync(appJsonPath, { encoding: 'utf-8' });
 	const appJson = JSON.parse(data.charCodeAt(0) === 0xfeff
 		? data.slice(1) // Remove BOM
 		: data);
 
-	sendDebugEvent('getAppJsonKey-end', { keyName: keyName, keyValue: appJson[keyName] });
 	return appJson[keyName];
 }
 

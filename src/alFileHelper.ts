@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
 import { ALFile, ALMethodRange, ALObject, OutputType } from './types';
-import { activeEditor, alFiles } from './extension';
+import { activeEditor, alFiles, writeToOutputChannel } from './extension';
 import { readFileSync } from 'fs';
 import { getCurrentWorkspaceConfig, getTestFolderFromConfig, getWorkspaceFolder } from './config';
 import { join } from 'path';
 import { objectDeclarationRegEx } from './constants';
-import { sendDebugEvent } from './telemetry';
 import { getOutputWriter, writeTable } from './output';
 import * as types from './types';
 
@@ -107,7 +106,6 @@ export async function getFilePathOfObject(object: ALObject, method?: string, fil
 
 export async function getALFilesInWorkspace(excludePattern?: string, glob?: string): Promise<ALFile[]> {
 	return new Promise(async (resolve) => {
-		sendDebugEvent('getALFilesInWorkspace-start');
 		let alFiles: ALFile[] = [];
 		let files;
 		if (glob) {
@@ -117,14 +115,13 @@ export async function getALFilesInWorkspace(excludePattern?: string, glob?: stri
 			files = await vscode.workspace.findFiles('**/*.al');
 		}
 		for (let file of files) {
-			sendDebugEvent('getALFilesInWorkspace-openTextDocument', { "path": file.fsPath });
 			const document = await vscode.workspace.openTextDocument(file);
 			const alObject = getALObjectOfDocument(document);
 			if (alObject) {
 				alFiles.push({ object: alObject, path: file.fsPath, excludeFromCodeCoverage: excludePath(file.fsPath, excludePattern) });
 			}
 			else {
-				sendDebugEvent('getALFilesInWorkspace-alObjectUndefined', { "path": file.fsPath })
+				writeToOutputChannel(`getALFilesInWorkspace-alObjectUndefined: path=${file.fsPath}`);
 			}
 		};
 
@@ -170,7 +167,6 @@ export function getALFileForALObject(object: ALObject, files?: ALFile[]): ALFile
 
 export async function openEditorToTestFileIfNotAlready(): Promise<Boolean> {
 	return new Promise(async resolve => {
-		sendDebugEvent('openEditorToTestFileIfNotAlready-start');
 		if (!activeEditorOpenToTestFile()) {
 			if (await openTestAppJson()) {
 				resolve(true);

@@ -3,8 +3,8 @@ import * as path from 'path';
 import { getCurrentWorkspaceConfig } from './config'
 import { getTestFolderPath } from './alFileHelper'
 import { publishAppUsingAlCommand, publishAppWithRapidUsingAlCommand } from './publish';
-import { documentIsTestCodeunit, getTestMethodRangesFromDocument } from './alFileHelper';
-import { debugTestHandler, getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
+import { documentIsTestCodeunit } from './alFileHelper';
+import { getTestItemFromFileNameAndSelection, runTestHandler } from './testController';
 
 export class TestRunnerWorkflow {
     

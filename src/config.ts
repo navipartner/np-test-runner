@@ -1,9 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import * as vscode from 'vscode';
-import { sendDebugEvent } from './telemetry';
 import * as types from './types';
 import { getTestFolderPath } from './alFileHelper';
-import { activeEditor } from './extension';
+import { activeEditor, writeToOutputChannel } from './extension';
 import * as path from 'path';
 
 export function getALTestRunnerPath(): string {
@@ -16,14 +15,13 @@ export function getALTestRunnerConfigPath(): string {
 }
 
 export function getALTestRunnerConfig() {
-	sendDebugEvent('getALTestRunnerConfig-start')
 	let alTestRunnerConfigPath = getALTestRunnerConfigPath();
 	let data: string;
 
 	try {
 		data = readFileSync(alTestRunnerConfigPath, { encoding: 'utf-8' });
-	} catch (error) {
-		sendDebugEvent('getALTestRunnerConfig-unableToReadConfigFile');
+	} catch (error) {		
+		writeToOutputChannel('getALTestRunnerConfig-unableToReadConfigFile');
 		createALTestRunnerConfig();
 		data = readFileSync(alTestRunnerConfigPath, { encoding: 'utf-8' });
 	}
@@ -33,10 +31,8 @@ export function getALTestRunnerConfig() {
 }
 
 export function getALTestRunnerConfigKeyValue(keyName: string) : string {
-	sendDebugEvent('getALTestRunnerConfigKeyValue', { keyName: keyName });
 	let config = getALTestRunnerConfig();
 	const keyValue = config[keyName];
-	sendDebugEvent('getALTestRunnerConfigKeyValue.result', { keyValue: keyValue });
 	return keyValue;
 }
 
@@ -45,7 +41,6 @@ export function setALTestRunnerConfig(keyName: string, keyValue: string | undefi
 	if (keyValue) {
 		debugKeyValue = keyValue;
 	}
-	sendDebugEvent('setALTestRunnerConfig', { keyName: keyName, keyValue: debugKeyValue })
 
 	let config = getALTestRunnerConfig();
 	//@ts-ignore
@@ -57,9 +52,6 @@ function createALTestRunnerConfig() {
 	let config: types.ALTestRunnerConfig = {
 		launchConfigName: "",
 		attachConfigName: "",
-		companyName: "",
-		testSuiteName: "",
-		testRunnerServiceUrl: "",
 		codeCoveragePath: ".//.npaltestrunner//codecoverage.json",
 		culture: "en-US"
 	};
@@ -79,8 +71,6 @@ function createALTestRunnerDir() {
 }
 
 export function launchConfigIsValid(alTestRunnerConfig?: types.ALTestRunnerConfig): types.launchConfigValidity {
-	sendDebugEvent('launchConfigIsValid-start');
-
 	if (alTestRunnerConfig === undefined) {
 		alTestRunnerConfig = getALTestRunnerConfig();
 	}
@@ -134,8 +124,6 @@ export function getLaunchJsonPath() {
 }
 
 export async function selectLaunchConfig() {
-	sendDebugEvent('selectLaunchConfig-start');
-
 	let debugConfigurations = getDebugConfigurationsFromLaunchJson('launch');
 	let selectedConfig;
 
@@ -151,8 +139,6 @@ export async function selectLaunchConfig() {
 }
 
 export async function selectAttachConfig() {
-	sendDebugEvent('selectAttachConfig-start');
-
 	let debugConfigurations = getDebugConfigurationsFromLaunchJson('attach');
 	let selectedConfig = '';
 
