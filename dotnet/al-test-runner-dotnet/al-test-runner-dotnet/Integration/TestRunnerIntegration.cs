@@ -30,7 +30,9 @@ namespace NaviPartner.ALTestRunner.Integration
         public TestRunnerIntegration() { }
 
         public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, string tests, string extensionId,
-            string extensionName, string testCodeunitsRange = "", string testProcedureRange = "", Dictionary<string, string>? disabledTests = null)
+            string extensionName, string testCodeunitsRange = "", string testProcedureRange = "", Dictionary<string, string>? disabledTests = null,
+            string codeCoverageTrackingType = "Disabled", bool codeCoverageTrackAllSessions = false, string codeCoverageExporterId = "", string codeCoverageFilePrefix = "",
+            string codeCoverageOutputPath = "./CodeCoverage", string codeCoverageMapType = "Disabled")
         {
             if (string.IsNullOrEmpty(alTestRunnerExtPath))
                 throw new ArgumentNullException(nameof(alTestRunnerExtPath), "AL Test Runner extension path cannot be null or empty");
@@ -50,11 +52,24 @@ namespace NaviPartner.ALTestRunner.Integration
             if (!Enum.TryParse(typeof(TestContext), tests, out var testContext))
                 throw new ArgumentException($"Invalid test context value: {tests}", nameof(tests));
 
+            if (codeCoverageTrackingType != "Disabled") {
+                if (string.IsNullOrEmpty(codeCoverageExporterId))
+                    throw new ArgumentNullException(nameof(codeCoverageExporterId), "Code coverage exporter ID cannot be null or empty");
+
+                if (string.IsNullOrEmpty(codeCoverageFilePrefix))
+                    throw new ArgumentNullException(nameof(codeCoverageFilePrefix), "Code coverage file prefix cannot be null or empty");
+
+                if (string.IsNullOrEmpty(codeCoverageOutputPath))
+                    throw new ArgumentNullException(nameof(codeCoverageOutputPath), "Code coverage output path cannot be null or empty");
+            }
+
             try
             {
                 var guidExtensionId = new Guid(extensionId);
                 return await InvokeALTests(alTestRunnerExtPath, alProjectPath, smbAlExtPath, (TestContext)testContext, guidExtensionId,
-                    extensionName, testCodeunitsRange, testProcedureRange, disabledTests);
+                    extensionName, testCodeunitsRange, testProcedureRange, disabledTests,
+                    codeCoverageTrackingType, codeCoverageTrackAllSessions, codeCoverageExporterId, codeCoverageFilePrefix,
+                    codeCoverageOutputPath, codeCoverageMapType);
             }
             catch (FormatException ex)
             {
@@ -63,7 +78,9 @@ namespace NaviPartner.ALTestRunner.Integration
         }
 
         public async Task<Array> InvokeALTests(string alTestRunnerExtPath, string alProjectPath, string smbAlExtPath, TestContext tests, Guid extensionId,
-            string? extensionName, string? testCodeunitsRange = "", string? testProcedureRange = "", Dictionary<string, string>? disabledTests = null)
+            string? extensionName, string? testCodeunitsRange = "", string? testProcedureRange = "", Dictionary<string, string>? disabledTests = null,
+            string codeCoverageTrackingType = "Disabled", bool codeCoverageTrackAllSessions = false, string codeCoverageExporterId = "", string codeCoverageFilePrefix = "",
+            string codeCoverageOutputPath = "./CodeCoverage", string codeCoverageMapType = "Disabled")
         {
             if (string.IsNullOrEmpty(alTestRunnerExtPath))
                 throw new ArgumentNullException(nameof(alTestRunnerExtPath), "AL Test Runner extension path cannot be null or empty");
@@ -76,6 +93,17 @@ namespace NaviPartner.ALTestRunner.Integration
 
             if (extensionId == Guid.Empty)
                 throw new ArgumentException("Extension ID cannot be empty", nameof(extensionId));
+
+            if (codeCoverageTrackingType != "Disabled") {
+                if (string.IsNullOrEmpty(codeCoverageExporterId))
+                    throw new ArgumentNullException(nameof(codeCoverageExporterId), "Code coverage exporter ID cannot be null or empty");
+
+                if (string.IsNullOrEmpty(codeCoverageFilePrefix))
+                    throw new ArgumentNullException(nameof(codeCoverageFilePrefix), "Code coverage file prefix cannot be null or empty");
+
+                if (string.IsNullOrEmpty(codeCoverageOutputPath))
+                    throw new ArgumentNullException(nameof(codeCoverageOutputPath), "Code coverage output path cannot be null or empty");
+            }
 
             bool recreateClient = false;
 
@@ -107,9 +135,19 @@ namespace NaviPartner.ALTestRunner.Integration
                     extensionId: extensionId.ToString(),
                     testCodeunitsRange: testCodeunitsRange,
                     testProcedureRange: testProcedureRange,
-                    disabledTests: disabledTestsArray);
+                    disabledTests: disabledTestsArray,
+                    codeCoverageTrackingType: codeCoverageTrackingType,
+                    codeCoverageTrackAllSessions: codeCoverageTrackAllSessions,
+                    codeCoverageExporterId: codeCoverageExporterId,
+                    codeCoverageMapType: codeCoverageMapType);
 
-                var results = DefaultTestRunner.RunAllTests();
+                var results = DefaultTestRunner.RunAllTests(
+                    codeCoverageTrackingType: codeCoverageTrackingType,
+                    codeCoverageOutputPath: codeCoverageOutputPath,
+                    codeCoverageExporterId: codeCoverageExporterId,
+                    codeCoverageFilePrefix: codeCoverageFilePrefix
+                    );
+
                 recreateClient = true;
 
                 return results;

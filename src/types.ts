@@ -136,3 +136,25 @@ export enum BcArtifactSourceEndpoint {
 	CDN = 'CDN',
 	BLOB = 'BLOB'
 }
+
+export enum CodeCoverageTrackingType {
+	Disabled = 'Disabled', 
+	PerRun = 'PerRun', 
+	PerCodeunit = 'PerCodeunit', 
+	PerTest = 'PerTest' 
+}
+
+export enum ProduceCodeCoverageMapType {
+	Disabled = 'Disabled',
+	PerCodeunit = 'PerCodeunit',
+	PerTest = 'PerTest'
+}
+
+export type CodeCoverateParams = {
+	codeCoverageTrackingType: CodeCoverageTrackingType;
+	codeCoverageMapType: ProduceCodeCoverageMapType;
+    codeCoverageTrackAllSessions: boolean;
+    codeCoverageExporterId: string;
+    codeCoverageFilePrefix: string;
+    codeCoverageOutputPath: string;
+}

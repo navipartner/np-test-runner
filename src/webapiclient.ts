@@ -80,7 +80,13 @@ export interface TestRunnerInvokeParams {
     extensionName: string;
     testCodeunitsRange: string;
     testProcedureRange: string;
-    disabledTests?: Map<string, string>
+    disabledTests?: Map<string, string>;
+    codeCoverageTrackingType?: string;
+    codeCoverageTrackAllSessions?: boolean;
+    codeCoverageExporterId?: string;
+    codeCoverageFilePrefix?: string;
+    codeCoverageOutputPath?: string;
+    codeCoverageMapType?: string;
 }
 
 export interface DownloadFilesFromRemoteZipParams {

@@ -6,7 +6,8 @@ import { alTestController, attachDebugger, stopDebugger, getAppJsonKey, outputWr
 import { ALMethod, ALFile, launchConfigValidity, CodeCoverageDisplay } from './types';
 import * as path from 'path';
 import { buildTestCoverageFromTestItem } from './testCoverage';
-import { getALFilesInCoverage, getFileCoverage, getStatementCoverage, readCodeCoverage, saveAllTestsCodeCoverage, saveTestRunCoverage } from './coverage';
+import { convertBCCoverageToJSON } from './coverage-converter';
+import { getALFilesInCoverage, getFileCoverage, getStatementCoverage, readCodeCoverage, saveAllTestsCodeCoverage, saveTestRunCoverage, getTestRunnerCodeCoverateParams } from './coverage';
 import { selectBcVersionIfNotSelected } from './clientContextDllHelper';
 import * as readline from 'readline';
 import * as fs from 'fs';
@@ -140,6 +141,10 @@ export async function runTestHandler(request: vscode.TestRunRequest) {
     setResultsForTestItems(results, request, run);
 
     if (getCurrentWorkspaceConfig().enableCodeCoverage) {
+        convertBCCoverageToJSON("C:/Users/JakubVanak/Documents/AL/01/.npaltestrunner/TestCoverageMap__50101-TestTableInsertWithErrrorOnInsert.dat",
+            "C:/Users/JakubVanak/Documents/AL/01/",
+            "C:/Users/JakubVanak/Documents/AL/01/.npaltestrunner/codecoverage.json"
+        )
         await saveTestRunCoverage(run);
         const codeCoverage = await readCodeCoverage(CodeCoverageDisplay.All, run);
         getALFilesInCoverage(codeCoverage).forEach(alFile => {
@@ -224,9 +229,11 @@ export async function runTest(filename?: string, selectionStart?: number, extens
                 }
                
                 const alProjectFolderPath = await getDocumentWorkspaceFolder();
+                const { codeCoverageTrackingType, codeCoverageMapType, codeCoverageTrackAllSessions, codeCoverageExporterId, codeCoverageFilePrefix, codeCoverageOutputPath } = await getTestRunnerCodeCoverateParams();
                 
                 const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "Test", 
-                    extensionId, extensionName, filename, selectionStart);
+                    extensionId, extensionName, filename, selectionStart, null, 
+                    codeCoverageTrackingType, codeCoverageTrackAllSessions, codeCoverageExporterId, codeCoverageFilePrefix, codeCoverageOutputPath, codeCoverageMapType);
 
                 const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
                 resolve(results);
@@ -252,9 +259,12 @@ export async function runAllTests(extensionId?: string, extensionName?: string):
                 if (extensionName === undefined) {
                     extensionName = getAppJsonKey('name');
                 }
+
+                const { codeCoverageTrackingType, codeCoverageMapType, codeCoverageTrackAllSessions, codeCoverageExporterId, codeCoverageFilePrefix, codeCoverageOutputPath } = await getTestRunnerCodeCoverateParams();
                 
                 const alProjectFolderPath = await getDocumentWorkspaceFolder();
-                const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "All", extensionId, extensionName, "", 0);
+                const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "All", extensionId, extensionName, "", 0,
+                    null, codeCoverageTrackingType, codeCoverageTrackAllSessions, codeCoverageExporterId, codeCoverageFilePrefix, codeCoverageOutputPath, codeCoverageMapType);
                 
                 const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
                 resolve(results);
@@ -282,9 +292,11 @@ export async function runSelectedTests(request: vscode.TestRunRequest, extension
                 }
 
                 const disabledTests = getDisabledTestsForRequest(request);
+                const { codeCoverageTrackingType, codeCoverageMapType, codeCoverageTrackAllSessions, codeCoverageExporterId, codeCoverageFilePrefix, codeCoverageOutputPath } = await getTestRunnerCodeCoverateParams();
                 
                 const alProjectFolderPath = await getDocumentWorkspaceFolder();
-                const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "All", extensionId, extensionName, "", 0, disabledTests);
+                const testResult: testResTransform.TestRun[] = await invokeTestRunnerViaHttp(getExtension()!.extensionPath, alProjectFolderPath, smbAlExtPath, "All", extensionId, extensionName, "", 0, disabledTests,
+                    codeCoverageTrackingType, codeCoverageTrackAllSessions, codeCoverageExporterId, codeCoverageFilePrefix, codeCoverageOutputPath, codeCoverageMapType);
                 
                 const results = await testResTransform.TestResultsTransformer.convertTestResultsToXUnitResults(testResult);
                 resolve(results);

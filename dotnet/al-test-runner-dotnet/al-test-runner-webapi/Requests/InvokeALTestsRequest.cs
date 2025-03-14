@@ -11,5 +11,11 @@
         public string? testCodeunitsRange { get; set; }
         public string? testProcedureRange { get; set; }
         public Dictionary<string, string>? disabledTests { get; set; }
+        public string? codeCoverageTrackingType { get; set; }
+        public bool? codeCoverageTrackAllSessions { get; set; }
+        public string? codeCoverageExporterId { get; set; }
+        public string? codeCoverageFilePrefix { get; set; }
+        public string? codeCoverageOutputPath { get; set; }
+        public string? codeCoverageMapType {  get; set; }
     }
 }

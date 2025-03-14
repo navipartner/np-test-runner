@@ -5,8 +5,10 @@ import * as types from './types';
 import { CodelensProvider } from './codelensProvider';
 import { updateCodeCoverageDecoration, createCodeCoverageStatusBarItem } from './coverage';
 import { documentIsTestCodeunit, getALFilesInWorkspace, getDocumentIdAndName, getTestFolderPath, getTestMethodRangesFromDocument, getALObjectOfDocument } from './alFileHelper';
-import { getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getLaunchJsonPath, getALTestRunnerConfigKeyValue, 
-	selectAttachConfig, getConfigurationsFromLaunchJsonByName } from './config';
+import {
+	getALTestRunnerConfig, getALTestRunnerPath, getCurrentWorkspaceConfig, getLaunchJsonPath, getALTestRunnerConfigKeyValue,
+	selectAttachConfig, getConfigurationsFromLaunchJsonByName
+} from './config';
 import { getOutputWriter, OutputWriter } from './output';
 import { createTestController, deleteTestItemForFilename, discoverTestsInDocument, discoverTestsInFileName, getTestNameFromSelectionStart } from './testController';
 import { onChangeAppFile } from './publish';
@@ -162,7 +164,9 @@ async function enableCheckTestsInActiveDocuments() {
 }
 
 export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alProjectPath: string, smbAlExtPath: string, tests: string, extensionId: string,
-	extensionName: string, fileName: string, selectionStart: number, disabledTests?: Map<string, string>): Promise<testResTransform.TestRun[]> {
+	extensionName: string, fileName: string, selectionStart: number, disabledTests?: Map<string, string>,
+	codeCoverageTrackingType?: string, codeCoverageTrackAllSessions?: boolean, codeCoverageExporterId?: string,
+	codeCoverageFilePrefix?: string, codeCoverageOutputPath?: string, codeCoverageMapType?: string): Promise<testResTransform.TestRun[]> {
 
 	const config = getCurrentWorkspaceConfig();
 	getALFilesInWorkspace(config.codeCoverageExcludeFiles).then(files => { alFiles = files });
@@ -188,7 +192,13 @@ export async function invokeTestRunnerViaHttp(alTestRunnerExtPath: string, alPro
 		extensionName: extensionName,
 		testCodeunitsRange: objectId,
 		testProcedureRange: procName,
-		disabledTests: disabledTests
+		disabledTests: disabledTests,
+		codeCoverageTrackingType: codeCoverageTrackingType,
+		codeCoverageTrackAllSessions: codeCoverageTrackAllSessions,
+		codeCoverageExporterId: codeCoverageExporterId,
+		codeCoverageFilePrefix: codeCoverageFilePrefix,
+		codeCoverageOutputPath: codeCoverageOutputPath,
+		codeCoverageMapType: codeCoverageMapType
 	};
 
 	const release = await runTestCallMutex.acquire();
@@ -210,7 +220,7 @@ export async function attachDebugger() {
 	}
 
 	let alTestRunnerConfig = getALTestRunnerConfig();
-	
+
 	if ((alTestRunnerConfig.attachConfigName === undefined) || (alTestRunnerConfig.attachConfigName.trim() === '')) {
 		await selectAttachConfig()
 		alTestRunnerConfig = getALTestRunnerConfig();
@@ -219,7 +229,7 @@ export async function attachDebugger() {
 	if ((alTestRunnerConfig.attachConfigName === undefined) || (alTestRunnerConfig.attachConfigName.trim() === '')) {
 		throw 'No attach configuration selected, without this the debugger cannot be started.';
 	}
-	
+
 	const attachConfig = await getConfigurationsFromLaunchJsonByName(alTestRunnerConfig.attachConfigName);
 
 	//const attachConfig = attachConfigs.shift() as vscode.DebugConfiguration;
@@ -608,4 +618,19 @@ async function startTestRunnerWebApiServerClient(context: vscode.ExtensionContex
 
 export function isWindowsPlatform(): boolean {
 	return (process.platform === 'win32');
+}
+
+export function getDirectoryPath(inputPath: string): string {
+	try {
+		if (fs.existsSync(inputPath)) {
+			const stats = fs.statSync(inputPath);
+			if (stats.isDirectory()) {
+				return path.resolve(inputPath);
+			}
+		}
+	} catch (error) {
+		console.error("Error checking path:", error);
+	}
+
+	return path.dirname(path.resolve(inputPath));
 }

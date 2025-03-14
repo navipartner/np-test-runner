@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import { getALObjectOfDocument, getALFileForALObject, getTestFolderPath } from './alFileHelper';
 import { copyFileSync, existsSync, readFileSync } from 'fs';
-import { ALFile, ALObject, CodeCoverageDisplay, CodeCoverageLine, CodeCoverageObject } from './types';
-import { activeEditor, passingTestDecorationType, outputWriter } from './extension';
+import { ALFile, ALObject, CodeCoverageDisplay, CodeCoverageLine, CodeCoverageObject, CodeCoverateParams, CodeCoverageTrackingType, ProduceCodeCoverageMapType } from './types';
+import { activeEditor, passingTestDecorationType, getDirectoryPath } from './extension';
 import { join, basename, dirname } from 'path';
-import { getALTestRunnerConfig } from './config';
+import { getALTestRunnerConfig, getCurrentWorkspaceConfig } from './config';
+import { config } from 'process';
 
 let codeCoverageStatusBarItem: vscode.StatusBarItem;
 let codeCoverageDisplay: CodeCoverageDisplay = CodeCoverageDisplay.Off;
@@ -263,4 +264,26 @@ export function getStatementCoverage(codeCoverage: CodeCoverageLine[], alFile: A
     }
 
     return statementCoverage;
+}
+
+export async function getTestRunnerCodeCoverateParams(): Promise<CodeCoverateParams> {    
+    if (getCurrentWorkspaceConfig().enableCodeCoverage) {
+        return {
+            codeCoverageTrackingType: CodeCoverageTrackingType.PerCodeunit,
+            codeCoverageMapType: ProduceCodeCoverageMapType.PerCodeunit,
+            codeCoverageTrackAllSessions: true,
+            codeCoverageExporterId: '130470',
+            codeCoverageFilePrefix: `TestCoverageMap_`,
+            codeCoverageOutputPath: getDirectoryPath(await getCodeCoveragePath()),
+        };
+    } else {
+        return {
+            codeCoverageTrackingType: CodeCoverageTrackingType.Disabled,
+            codeCoverageMapType: ProduceCodeCoverageMapType.Disabled,
+            codeCoverageTrackAllSessions: false,
+            codeCoverageExporterId: '',
+            codeCoverageFilePrefix: '',
+            codeCoverageOutputPath: ''
+        };
+    }    
 }

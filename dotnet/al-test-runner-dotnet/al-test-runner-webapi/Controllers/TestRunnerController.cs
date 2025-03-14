@@ -25,7 +25,10 @@ namespace NaviPartner.ALTestRunner.WebApi.Controllers
                 var results = await testRunner.InvokeALTests(request.alTestRunnerExtPath, request.alProjectPath, request.smbAlExtPath,
                     (TestContext)Enum.Parse(typeof(TestContext), request.tests),
                     (!string.IsNullOrEmpty(request.extensionId)) ? new Guid(request.extensionId) : Guid.Empty, request.extensionName,
-                    request.testCodeunitsRange, request.testProcedureRange, request.disabledTests);
+                    request.testCodeunitsRange, request.testProcedureRange, request.disabledTests,
+                    request.codeCoverageTrackingType, request.codeCoverageTrackAllSessions ?? false,
+                    request.codeCoverageExporterId, request.codeCoverageFilePrefix, request.codeCoverageOutputPath,
+                    request.codeCoverageMapType);
 
                 return results;
             } 

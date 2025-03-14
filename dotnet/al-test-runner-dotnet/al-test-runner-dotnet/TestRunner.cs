@@ -19,6 +19,7 @@ namespace NaviPartner.ALTestRunner
         public const string DefaultTestSuite = "DEFAULT";
         public const int DefaultTestPage = 130455;
         public const int DefaultTestRunnerCodeunit = 130450;
+        public const string CCCollectedResult = "Done.";
         public const string DateTimeFormat = "s";
         public const string FailureTestResultType = "1";
         public const string SuccessTestResultType = "2";
@@ -27,7 +28,8 @@ namespace NaviPartner.ALTestRunner
         public int TestPage { get; private set; }
         public string TestSuite { get; private set; }
 
-        public string ClientSessionId { 
+        public string ClientSessionId
+        {
             get
             {
                 if (this.ClientSession == null)
@@ -35,7 +37,7 @@ namespace NaviPartner.ALTestRunner
                 if (this.ClientSession.Info == null)
                     return "";
                 return this.ClientSession.Info.SessionId;
-            } 
+            }
         }
 
         public TestRunner(string serviceUrl, string authenticationScheme, ICredentials credential,
@@ -49,7 +51,9 @@ namespace NaviPartner.ALTestRunner
         }
 
         public void SetupTestRun(int testPage = DefaultTestPage, string testSuite = DefaultTestSuite, string extensionId = "", string testCodeunitsRange = "",
-            string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[]? disabledTests = null, bool stabilityRun = false)
+            string testProcedureRange = "", int testRunnerCodeunit = DefaultTestRunnerCodeunit, DisabledTest[]? disabledTests = null, bool stabilityRun = false,
+            string codeCoverageTrackingType = "Disabled", bool codeCoverageTrackAllSessions = false, string codeCoverageExporterId = "",
+            string codeCoverageMapType = "Disabled")
         {
             TestPage = testPage;
             TestSuite = testSuite;
@@ -64,7 +68,27 @@ namespace NaviPartner.ALTestRunner
             SetStabilityRun(OpenedForm, stabilityRun);
             ClearTestResults(OpenedForm);
 
-            // TODO: Codecoverage settings if enabled!
+            if (codeCoverageTrackingType != "Disabled")
+            {
+                SetCCTrackingType(OpenedForm, codeCoverageTrackingType);
+
+                if (codeCoverageTrackAllSessions)
+                {
+                    SetCCTrackAllSessions(OpenedForm, true);
+                }
+
+                if (!string.IsNullOrEmpty(codeCoverageExporterId))
+                {
+                    SetCCExporterID(OpenedForm, codeCoverageExporterId);
+                }
+
+                if (codeCoverageMapType != "Disabled")
+                {
+                    SetCCProduceCodeCoverageMap(OpenedForm, codeCoverageMapType);
+                }
+
+                ClearCCResults(OpenedForm);
+            }
 
             //CloseForm(form);
         }
@@ -82,11 +106,12 @@ namespace NaviPartner.ALTestRunner
                 return null;
             }
 
-            resultObj = JsonConvert.DeserializeObject<TestResult>(resultString);            
+            resultObj = JsonConvert.DeserializeObject<TestResult>(resultString);
             return resultObj;
         }
 
-        public Array RunAllTests()
+        public Array RunAllTests(string codeCoverageTrackingType = "Disabled", string codeCoverageOutputPath = "",
+            string codeCoverageExporterId = "", string codeCoverageFilePrefix = "")
         {
             int numberOfUnexpectedFailures = 0;
             ArrayList testRunResults = new ArrayList();
@@ -108,10 +133,14 @@ namespace NaviPartner.ALTestRunner
                         return testRunResults.ToArray();
                     }
 
-                    // TODO: Rework the following with adding support for code coverage:
-                    //if($CodeCoverageTrackingType -ne 'Disabled') {
-                    //   $null = CollectCoverageResults -TrackingType $CodeCoverageTrackingType -OutputPath $CodeCoverageOutputPath -DisableSSLVerification:$DisableSSLVerification -AuthorizationType $AuthorizationType -Credential $Credential -ServiceUrl $ServiceUrl -CodeCoverageFilePrefix $CodeCoverageFilePrefix
-                    //}
+                    if (codeCoverageTrackingType != "Disabled")
+                    {
+                        CollectCoverageResults(
+                            codeCoverageTrackingType,
+                            codeCoverageOutputPath,
+                            codeCoverageExporterId,
+                            codeCoverageFilePrefix: codeCoverageFilePrefix);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -223,7 +252,7 @@ namespace NaviPartner.ALTestRunner
                 return;
             }
 
-            foreach ( var disabledTestMethod in disabledTests)
+            foreach (var disabledTestMethod in disabledTests)
             {
                 var testKey = disabledTestMethod.CodeunitName + "," + disabledTestMethod.Method;
                 var removeTestMethodControl = GetControlByName(form, "DisableTestMethod");
@@ -239,6 +268,171 @@ namespace NaviPartner.ALTestRunner
         protected void ClearTestResults(ClientLogicalForm form)
         {
             this.InvokeAction(GetActionByName(form, "ClearTestResults"));
+        }
+
+        protected void SetCCTrackingType(ClientLogicalForm form, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            var trackingTypeValues = new Dictionary<string, int>
+    {
+        { "Disabled", 0 },
+        { "PerRun", 1 },
+        { "PerCodeunit", 2 },
+        { "PerTest", 3 }
+    };
+
+            if (!trackingTypeValues.ContainsKey(value))
+            {
+                throw new ArgumentException($"Invalid tracking type: {value}. Must be one of: Disabled, PerRun, PerCodeunit, PerTest");
+            }
+
+            var trackingTypeControl = GetControlByName(form, "CCTrackingType");
+            SaveValue(trackingTypeControl, trackingTypeValues[value].ToString());
+        }
+
+        protected void SetCCTrackAllSessions(ClientLogicalForm form, bool value)
+        {
+            if (!value)
+            {
+                return;
+            }
+
+            var trackAllSessionsControl = GetControlByName(form, "CCTrackAllSessions");
+            SaveValue(trackAllSessionsControl, value.ToString());
+        }
+
+        protected void SetCCExporterID(ClientLogicalForm form, string exporterId)
+        {
+            if (string.IsNullOrEmpty(exporterId))
+            {
+                return;
+            }
+
+            var exporterIdControl = GetControlByName(form, "CCExporterID");
+            SaveValue(exporterIdControl, exporterId);
+        }
+
+        protected void SetCCProduceCodeCoverageMap(ClientLogicalForm form, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            var mapTypeValues = new Dictionary<string, int>
+    {
+        { "Disabled", 0 },
+        { "PerCodeunit", 1 },
+        { "PerTest", 2 }
+    };
+
+            if (!mapTypeValues.ContainsKey(value))
+            {
+                throw new ArgumentException($"Invalid coverage map type: {value}. Must be one of: Disabled, PerCodeunit, PerTest");
+            }
+
+            var ccMapControl = GetControlByName(form, "CCMap");
+            SaveValue(ccMapControl, mapTypeValues[value].ToString());
+        }
+
+        protected void ClearCCResults(ClientLogicalForm form)
+        {
+            InvokeAction(GetActionByName(form, "ClearCodeCoverage"));
+        }
+
+        public void CollectCoverageResults(
+            string trackingType = "Disabled",
+            string outputPath = "",
+            string exporterId = "",
+            string coverageMapType = "Disabled",
+            string codeCoverageFilePrefix = "")
+        {
+            if (trackingType == "Disabled")
+            {
+                return;
+            }
+
+            OpenTestForm(TestPage);
+            SetTestSuite(OpenedForm, TestSuite);
+
+            // Set CodeCoverage parameters
+            SetCCTrackingType(OpenedForm, trackingType);
+            SetCCExporterID(OpenedForm, exporterId);
+            SetCCProduceCodeCoverageMap(OpenedForm, coverageMapType);
+
+            string ccInfo;
+
+            do
+            {
+                InvokeAction(GetActionByName(OpenedForm, "GetCodeCoverage"));
+
+                var ccResultControl = GetControlByName(OpenedForm, "CCResultsCSVText");
+                var ccInfoControl = GetControlByName(OpenedForm, "CCInfo");
+
+                string ccResult = ccResultControl.StringValue;
+                ccInfo = ccInfoControl.StringValue;
+
+                if (ccInfo != CCCollectedResult && !string.IsNullOrEmpty(outputPath))
+                {
+                    // Replace commas with dashes for the filename
+                    string safeInfo = ccInfo.Replace(",", "-");
+                    string ccOutputFilename = $"{codeCoverageFilePrefix}_{safeInfo}.dat";
+                    string fullPath = Path.Combine(outputPath, ccOutputFilename);
+
+                    Console.WriteLine($"Storing coverage results of {ccInfo} in: {fullPath}");
+                    File.WriteAllText(fullPath, ccResult);
+                }
+            } while (ccInfo != CCCollectedResult);
+
+            if (coverageMapType != "Disabled")
+            {
+                string codeCoverageMapPath = Path.Combine(outputPath, "TestCoverageMap");
+                SaveCodeCoverageMap(codeCoverageMapPath);
+            }
+        }
+
+        protected void SaveCodeCoverageMap(string outputPath)
+        {
+            if (string.IsNullOrEmpty(outputPath))
+            {
+                throw new ArgumentException("Output path must be specified");
+            }
+
+            // Create directory if it doesn't exist
+            if (!Directory.Exists(outputPath))
+            {
+                Directory.CreateDirectory(outputPath);
+            }
+
+            try
+            {
+                OpenTestForm(TestPage);
+                SetTestSuite(OpenedForm, TestSuite);
+
+                // Get code coverage map
+                InvokeAction(GetActionByName(OpenedForm, "GetCodeCoverageMap"));
+
+                var ccMapControl = GetControlByName(OpenedForm, "CCMapCSVText");
+                string ccMap = ccMapControl.StringValue;
+
+                string codeCoverageMapFileName = Path.Combine(outputPath, "TestCoverageMap.txt");
+
+                if (File.Exists(codeCoverageMapFileName))
+                {
+                    File.AppendAllText(codeCoverageMapFileName, ccMap);
+                }
+                else
+                {
+                    File.WriteAllText(codeCoverageMapFileName, ccMap);
+                }
+            }
+            finally
+            {                
+            }
         }
     }
 }
