@@ -1,5 +1,3 @@
-// runTest.ts
-
 async function runTests() {
     console.log("Running tests...");
     // Add your test execution logic here
