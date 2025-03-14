@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches-ignore:
+      - main
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -42,5 +44,5 @@ jobs:
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: NP AL Test Runner
+          name: NP-AL-Test-Runner-${{ github.run_number }}
           path: ./*.vsix
