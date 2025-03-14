@@ -14,6 +14,34 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.1.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Set prerelease version
+        id: set_version
+        run: |
+          $branch = "${{ github.head_ref || github.ref_name }}"
+          $branchSafe = $branch -replace '[^a-zA-Z0-9]', '-'
+          
+          $package = Get-Content -Raw -Path package.json | ConvertFrom-Json
+          $currentVersion = $package.version
+          
+          # Remove any existing prerelease suffix
+          $baseVersion = $currentVersion -replace '-.*$', ''
+          
+          # Add branch name and build number as prerelease identifier
+          $newVersion = "$baseVersion-$branchSafe.${{ github.run_number }}"
+          
+          $package.version = $newVersion
+          $package | ConvertTo-Json -Depth 100 | Set-Content package.json
+          
+          echo "::set-output name=version::$newVersion"
+        shell: pwsh
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -25,11 +53,6 @@ jobs:
           dotnet build dotnet\al-test-runner-dotnet\al-test-runner-dotnet.sln
           dotnet publish dotnet\al-test-runner-dotnet\al-test-runner-webapi\al-test-runner-webapi.csproj -c Release -o .bin\al-test-runner-webapi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
       - name: npm install, compile and test
         run: |
           npm install
@@ -39,10 +62,10 @@ jobs:
       - name: package with vsce
         run: |
           npm install -g vsce
-          vsce package
+          vsce package --pre-release
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: NP-AL-Test-Runner-${{ github.run_number }}
+          name: NP-AL-Test-Runner-${{ steps.set_version.outputs.version }}
           path: ./*.vsix
