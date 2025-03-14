@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4.1.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build and publish .NET project
+        run: |
+          dotnet build dotnet\al-test-runner-dotnet\al-test-runner-dotnet.sln
+          dotnet publish dotnet\al-test-runner-dotnet\al-test-runner-webapi\al-test-runner-webapi.csproj -c Release -o .bin\al-test-runner-webapi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: npm install, compile and test
+        run: |
+          npm install
+          npm run compile
+          npm test
+
+      - name: package with vsce
+        run: |
+          npm install -g vsce
+          vsce package
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: NP AL Test Runner
+          path: ./*.vsix
