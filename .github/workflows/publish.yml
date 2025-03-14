@@ -1,0 +1,134 @@
+name: Publish to VSCode Marketplace
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_increment:
+        description: 'Version increment type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: 'Prerelease identifier (optional for main, required for other branches)'
+        required: false
+        type: string
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4.1.2
+        with:
+          fetch-depth: 0
+
+      - name: Check prerelease requirement
+        if: github.ref != 'refs/heads/main' && github.event.inputs.prerelease == ''
+        run: |
+          echo "Error: Prerelease identifier is required for branches other than main"
+          exit 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update version using semver
+        id: semver
+        run: |
+          npm install -g semver
+          $currentVersion = (Get-Content -Raw -Path package.json | ConvertFrom-Json).version
+          $prerelease = "${{ github.event.inputs.prerelease }}"
+          $isBranchMain = "${{ github.ref }}" -eq "refs/heads/main"
+          
+          # Remove any existing prerelease suffix
+          $baseVersion = $currentVersion -replace '-.*$', ''
+          
+          $newVersion = ""
+          if ("${{ github.event.inputs.version_increment }}" -eq "patch") {
+            $newVersion = $(semver -i patch $baseVersion)
+          } elseif ("${{ github.event.inputs.version_increment }}" -eq "minor") {
+            $newVersion = $(semver -i minor $baseVersion)
+          } elseif ("${{ github.event.inputs.version_increment }}" -eq "major") {
+            $newVersion = $(semver -i major $baseVersion)
+          }
+          
+          if (!$isBranchMain -or $prerelease -ne "") {
+            # For non-main branches, use branch name if no prerelease provided
+            if (!$isBranchMain -and $prerelease -eq "") {
+              $branch = "${{ github.ref_name }}"
+              $branchSafe = $branch -replace '[^a-zA-Z0-9]', '-'
+              $prerelease = $branchSafe
+            }
+            $newVersion = "$newVersion-$prerelease"
+          }
+          
+          $package = Get-Content -Raw -Path package.json | ConvertFrom-Json
+          $package.version = $newVersion
+          $package | ConvertTo-Json -Depth 100 | Set-Content package.json
+          
+          echo "::set-output name=new_version::$newVersion"
+          echo "::set-output name=is_prerelease::$($newVersion -match '-' ? 'true' : 'false')"
+        shell: pwsh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build and publish .NET project
+        run: |
+          dotnet build dotnet\al-test-runner-dotnet\al-test-runner-dotnet.sln
+          dotnet publish dotnet\al-test-runner-dotnet\al-test-runner-webapi\al-test-runner-webapi.csproj -c Release -o .bin\al-test-runner-webapi
+
+      - name: npm install and compile
+        run: |
+          npm install
+          npm run compile
+
+      - name: package with vsce
+        run: |
+          npm install -g vsce
+          if ("${{ steps.semver.outputs.is_prerelease }}" -eq "true") {
+            vsce package --pre-release
+          } else {
+            vsce package
+          }
+        shell: pwsh
+
+      - name: Create Git tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "v${{ steps.semver.outputs.new_version }}" -m "Release v${{ steps.semver.outputs.new_version }}"
+          git push origin "v${{ steps.semver.outputs.new_version }}"
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: NP-AL-Test-Runner-v${{ steps.semver.outputs.new_version }}
+          path: ./*.vsix
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.semver.outputs.new_version }}
+          name: Release v${{ steps.semver.outputs.new_version }}
+          draft: false
+          prerelease: ${{ steps.semver.outputs.is_prerelease == 'true' }}
+          files: ./*.vsix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to VSCode Marketplace
+        run: |
+          if ("${{ steps.semver.outputs.is_prerelease }}" -eq "true") {
+            vsce publish --pre-release -p ${{ secrets.VSCE_PAT }}
+          } else {
+            vsce publish -p ${{ secrets.VSCE_PAT }}
+          }
+        shell: pwsh
+  
