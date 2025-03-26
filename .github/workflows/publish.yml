@@ -61,9 +61,21 @@ jobs:
           $package.version = $packageVersion
           $package | ConvertTo-Json -Depth 100 | Set-Content package.json
           
+          echo "::set-output name=base_version::$packageVersion"
           echo "::set-output name=new_version::$newVersion"
           echo "::set-output name=is_prerelease::$($isPrerelease ? 'true' : 'false')"
         shell: pwsh
+
+      - name: Commit version update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add package.json
+          git commit -m "Bump version to ${{ steps.semver.outputs.base_version }}"
+          git push
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -97,7 +109,7 @@ jobs:
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/v${{ steps.semver.outputs.new_version }}',
+              ref: 'refs/tags/v${{ steps.semver.outputs.base_version }}',
               sha: context.sha
             })
         env:
@@ -106,13 +118,13 @@ jobs:
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: NP-AL-Test-Runner-v${{ steps.semver.outputs.new_version }}
+          name: NP-AL-Test-Runner-v${{ steps.semver.outputs.base_version }}
           path: ./*.vsix
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.semver.outputs.new_version }}
+          tag_name: v${{ steps.semver.outputs.base_version }}
           name: Release v${{ steps.semver.outputs.new_version }}
           draft: false
           prerelease: ${{ steps.semver.outputs.is_prerelease == 'true' }}
