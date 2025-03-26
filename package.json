@@ -16,7 +16,7 @@
 	"files": [
 		".bin/**"
 	],
-	"version": "0.31.1",
+	"version": "0.31.3",
 	"engines": {
 		"vscode": ">=1.89.0"
 	},
