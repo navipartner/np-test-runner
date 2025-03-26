@@ -11,10 +11,6 @@ on:
           - patch
           - minor
           - major
-      prerelease:
-        description: 'Prerelease identifier (optional for main, required for other branches)'
-        required: false
-        type: string
 
 jobs:
   publish:
@@ -28,12 +24,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check prerelease requirement
-        if: github.ref != 'refs/heads/main' && github.event.inputs.prerelease == ''
-        run: |
-          echo "Error: Prerelease identifier is required for branches other than main"
-          exit 1
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -44,7 +34,6 @@ jobs:
         run: |
           npm install -g semver
           $currentVersion = (Get-Content -Raw -Path package.json | ConvertFrom-Json).version
-          $prerelease = "${{ github.event.inputs.prerelease }}"
           $isBranchMain = "${{ github.ref }}" -eq "refs/heads/main"
           
           # Remove any existing prerelease suffix
@@ -61,13 +50,10 @@ jobs:
 
           $packageVersion = $newVersion
           
-          if (!$isBranchMain -or $prerelease -ne "") {
-            # For non-main branches, use branch name if no prerelease provided
-            if (!$isBranchMain -and $prerelease -eq "") {
-              $branch = "${{ github.ref_name }}"
-              $branchSafe = $branch -replace '[^a-zA-Z0-9]', '-'
-              $prerelease = $branchSafe
-            }
+          $isPrerelease = !$isBranchMain
+          $prerelease = $isPrerelease ? "beta" : ""
+          
+          if ($isPrerelease) {
             $newVersion = "$newVersion-$prerelease"
           }
           
@@ -76,7 +62,7 @@ jobs:
           $package | ConvertTo-Json -Depth 100 | Set-Content package.json
           
           echo "::set-output name=new_version::$newVersion"
-          echo "::set-output name=is_prerelease::$($newVersion -match '-' ? 'true' : 'false')"
+          echo "::set-output name=is_prerelease::$($isPrerelease ? 'true' : 'false')"
         shell: pwsh
 
       - name: Setup .NET
@@ -142,4 +128,3 @@ jobs:
             vsce publish -p ${{ secrets.VSCE_PAT }}
           }
         shell: pwsh
-  
