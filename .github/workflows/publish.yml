@@ -11,25 +11,18 @@ on:
           - patch
           - minor
           - major
-      prerelease:
-        description: 'Prerelease identifier (optional for main, required for other branches)'
-        required: false
-        type: string
 
 jobs:
   publish:
     runs-on: windows-latest
+    
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4.1.2
         with:
           fetch-depth: 0
-
-      - name: Check prerelease requirement
-        if: github.ref != 'refs/heads/main' && github.event.inputs.prerelease == ''
-        run: |
-          echo "Error: Prerelease identifier is required for branches other than main"
-          exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,7 +34,6 @@ jobs:
         run: |
           npm install -g semver
           $currentVersion = (Get-Content -Raw -Path package.json | ConvertFrom-Json).version
-          $prerelease = "${{ github.event.inputs.prerelease }}"
           $isBranchMain = "${{ github.ref }}" -eq "refs/heads/main"
           
           # Remove any existing prerelease suffix
@@ -55,24 +47,35 @@ jobs:
           } elseif ("${{ github.event.inputs.version_increment }}" -eq "major") {
             $newVersion = $(semver -i major $baseVersion)
           }
+
+          $packageVersion = $newVersion
           
-          if (!$isBranchMain -or $prerelease -ne "") {
-            # For non-main branches, use branch name if no prerelease provided
-            if (!$isBranchMain -and $prerelease -eq "") {
-              $branch = "${{ github.ref_name }}"
-              $branchSafe = $branch -replace '[^a-zA-Z0-9]', '-'
-              $prerelease = $branchSafe
-            }
+          $isPrerelease = !$isBranchMain
+          $prerelease = $isPrerelease ? "beta" : ""
+          
+          if ($isPrerelease) {
             $newVersion = "$newVersion-$prerelease"
           }
           
           $package = Get-Content -Raw -Path package.json | ConvertFrom-Json
-          $package.version = $newVersion
+          $package.version = $packageVersion
           $package | ConvertTo-Json -Depth 100 | Set-Content package.json
           
+          echo "::set-output name=base_version::$packageVersion"
           echo "::set-output name=new_version::$newVersion"
-          echo "::set-output name=is_prerelease::$($newVersion -match '-' ? 'true' : 'false')"
+          echo "::set-output name=is_prerelease::$($isPrerelease ? 'true' : 'false')"
         shell: pwsh
+
+      - name: Commit version update
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add package.json
+          git commit -m "Bump version to ${{ steps.semver.outputs.base_version }}"
+          git push
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -100,22 +103,28 @@ jobs:
         shell: pwsh
 
       - name: Create Git tag
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag -a "v${{ steps.semver.outputs.new_version }}" -m "Release v${{ steps.semver.outputs.new_version }}"
-          git push origin "v${{ steps.semver.outputs.new_version }}"
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/v${{ steps.semver.outputs.base_version }}',
+              sha: context.sha
+            })
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.3.1
         with:
-          name: NP-AL-Test-Runner-v${{ steps.semver.outputs.new_version }}
+          name: NP-AL-Test-Runner-v${{ steps.semver.outputs.base_version }}
           path: ./*.vsix
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.semver.outputs.new_version }}
+          tag_name: v${{ steps.semver.outputs.base_version }}
           name: Release v${{ steps.semver.outputs.new_version }}
           draft: false
           prerelease: ${{ steps.semver.outputs.is_prerelease == 'true' }}
@@ -131,4 +140,3 @@ jobs:
             vsce publish -p ${{ secrets.VSCE_PAT }}
           }
         shell: pwsh
-  

@@ -1,422 +1,422 @@
 {
-	"name": "np-al-test-runner",
-	"displayName": "NaviPartner AL Test Runner",
-	"description": "NaviPartner test runner for AL tests for Business Central development",
-	"publisher": "NaviPartner",
-	"bugs": {
-		"email": "jakubv@navipartner.dk",
-		"url": "https://github.com/navipartner/np-test-runner/issues"
-	},
-	"homepage": "https://navipartner.com/",
-	"preview": true,
-	"repository": {
-		"url": "https://github.com/navipartner/np-test-runner"
-	},
-	"icon": "np-al-test-runner-icon.jpg",
-	"files": [
-		".bin/**"
-	],
-	"version": "0.31.1",
-	"engines": {
-		"vscode": ">=1.89.0"
-	},
-	"categories": [
-		"Testing"
-	],
-	"keywords": [
-		"AL",
-		"Dynamics 365 Business Central",
-		"Test Runner",
-		"Tests"
-	],
-	"license": "SEE LICENSE IN LICENSE",
-	"galleryBanner": {
-		"color": "#0060A0",
-		"theme": "light"
-	},
-	"pricing": "Free",
-	"activationEvents": [
-		"workspaceContains:.npaltestrunner",
-		"onLanguage:al"
-	],
-	"extensionDependencies": [
-		"ms-dynamics-smb.al"
-	],
-	"main": "./out/extension.js",
-	"contributes": {
-		"menus": {
-			"editor/context": [
-				{
-					"when": "editorLangId == al",
-					"command": "npaltestrunner.showTableData",
-					"group": "NP AL Test Runner"
-				}
-			]
-		},
-		"commands": [
-			{
-				"command": "npaltestrunner.runAllTests",
-				"title": "Run All Tests",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.runTestsCodeunit",
-				"title": "Run Tests in Current Codeunit",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.runTest",
-				"title": "Run Current Test",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.debugTest",
-				"title": "Debug Current Test",
-				"category": "NP AL Test Runner",
-				"enablement": "false"
-			},
-			{
-				"command": "npaltestrunner.debugTestsCodeunit",
-				"title": "Debug Tests in Current Codeunit",
-				"category": "NP AL Test Runner",
-				"enablement": "false"
-			},
-			{
-				"command": "npaltestrunner.clearTestResults",
-				"title": "Clear Test Results",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.openConfigFile",
-				"title": "Open Config File",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.toggleCodeCoverage",
-				"title": "Toggle Code Coverage",
-				"category": "NP AL Test Runner",
-				"enablement": "false"
-			},
-			{
-				"command": "npaltestrunner.showTableData",
-				"title": "Show Table Data",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.showRelatedTests",
-				"title": "Show Related Tests",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.listALFiles",
-				"title": "List AL Files",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.showPerformanceProfile",
-				"title": "Show Performance Profile",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.downloadClientSessionLibraries",
-				"title": "Download BC Client Session libraries",
-				"category": "NP AL Test Runner"
-			},
-			{
-				"command": "npaltestrunner.runSelectedWorkflow",
-				"title": "Run Default Test Workflow",
-				"category": "NP AL Test Runner"
-			}
-		],
-		"keybindings": [
-			{
-				"command": "npaltestrunner.runTest",
-				"key": "Ctrl+Alt+T"
-			},
-			{
-				"command": "npaltestrunner.runAllTests",
-				"key": "Ctrl+Alt+Shift+T"
-			},
-			{
-				"command": "npaltestrunner.debugTest",
-				"key": "Ctrl+Alt+D",
-				"when": "false"
-			},
-			{
-				"command": "npaltestrunner.toggleCodeCoverage",
-				"key": "Ctrl+Alt+C",
-				"when": "false"
-			},
-			{
-				"command": "npaltestrunner.runSelectedWorkflow",
-				"key": "Ctrl+Alt+W"
-			}
-		],
-		"configuration": [
-			{
-				"title": "NaviPartner AL Test Runner",
-				"properties": {
-					"np-al-test-runner.decorateTestMethods": {
-						"type": "boolean",
-						"scope": "resource",
-						"default": true,
-						"description": "Decorate test methods with test results. When this setting is enabled the AL Test Runner extension will decorate the names of test methods in test codeunits according to the result of running that test."
-					},
-					"np-al-test-runner.passingTestsColor": {
-						"type": "object",
-						"description": "Background color for passing tests (rgba format)",
-						"scope": "resource",
-						"default": {
-							"red": 0,
-							"green": 255,
-							"blue": 0,
-							"alpha": 0.3
-						},
-						"properties": {
-							"red": {
-								"type": "number",
-								"description": "Red element of the color (0-255)"
-							},
-							"green": {
-								"type": "number",
-								"description": "Green element of the color (0-255)"
-							},
-							"blue": {
-								"type": "number",
-								"description": "Blue element of the color (0-255)"
-							},
-							"alpha": {
-								"type": "number",
-								"description": "Alpha (between 0 for transparent and 1 for opaque)"
-							}
-						}
-					},
-					"np-al-test-runner.failingTestsColor": {
-						"type": "object",
-						"description": "Background color for failing tests (rgba format)",
-						"scope": "resource",
-						"default": {
-							"red": 255,
-							"green": 0,
-							"blue": 0,
-							"alpha": 0.3
-						},
-						"properties": {
-							"red": {
-								"type": "number",
-								"description": "Red element of the color (0-255)"
-							},
-							"green": {
-								"type": "number",
-								"description": "Green element of the color (0-255)"
-							},
-							"blue": {
-								"type": "number",
-								"description": "Blue element of the color (0-255)"
-							},
-							"alpha": {
-								"type": "number",
-								"description": "Alpha (between 0 for transparent and 1 for opaque)"
-							}
-						}
-					},
-					"np-al-test-runner.untestedTestsColor": {
-						"type": "object",
-						"description": "Background color for untested tests (rgba format)",
-						"scope": "resource",
-						"default": {
-							"red": 250,
-							"green": 196,
-							"blue": 0,
-							"alpha": 0.3
-						},
-						"properties": {
-							"red": {
-								"type": "number",
-								"description": "Red element of the color (0-255)"
-							},
-							"green": {
-								"type": "number",
-								"description": "Green element of the color (0-255)"
-							},
-							"blue": {
-								"type": "number",
-								"description": "Blue element of the color (0-255)"
-							},
-							"alpha": {
-								"type": "number",
-								"description": "Alpha (between 0 for transparent and 1 for opaque)"
-							}
-						}
-					},
-					"np-al-test-runner.highlightFailingLine": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Highlight the line in the test method that has failed",
-						"default": true
-					},
-					"np-al-test-runner.failingLineDecoration": {
-						"type": "string",
-						"scope": "resource",
-						"description": "TextDecoration CSS to decorate failing lines with",
-						"default": "underline wavy red"
-					},
-					"np-al-test-runner.enableCodeLens": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Enables CodeLens actions to run individual tests or all tests in a codeunit",
-						"default": true
-					},
-					"np-al-test-runner.codeCoveragePath": {
-						"type": "string",
-						"scope": "resource",
-						"description": "The path to the JSON file which has details of the code coverage for this project",
-						"default": "./.npaltestrunner/codecoverage.json"
-					},
-					"np-al-test-runner.codeCoverageExcludeFiles": {
-						"type": "string",
-						"scope": "resource",
-						"description": "A regex pattern which defines file paths to exclude from the code coverage summary e.g. use it to exclude test objects"
-					},
-					"np-al-test-runner.enableCodeCoverage": {
-						"type": "boolean",
-						"scope": "resource",
-						"description": "Outputs code coverage statistics with test results and decorates covered lines with the Toggle Code Coverage command. See also the Code Coverage Path extension setting and key in the AL Test Runner config.json file.",
-						"default": false,
-						"anyOf": [
-							false
-						]
-					},
-					"np-al-test-runner.testFolderName": {
-						"type": "string",
-						"scope": "resource",
-						"description": "The name of the workspace folder that contains the test app. Please reload VS Code after changing this setting."
-					},
-					"np-al-test-runner.testOutputLocation": {
-						"enum": [
-							"Output",
-							"Editor"
-						],
-						"scope": "resource",
-						"description": "Determines where test results will be displayed",
-						"default": "Output"
-					},
-					"np-al-test-runner.testWorkspaceFolderIdentifiers": {
-						"type": "array",
-						"scope": "resource",
-						"description": "Text to look for in workspace folder names to identify the folder which contains the test app",
-						"default": [
-							"tests",
-							"test"
-						]
-					},
-					"np-al-test-runner.selectedWorkflow": {
-						"type": "string",
-						"scope": "resource",
-						"default": "defaultWorkflow"
-					},
-					"np-al-test-runner.workflows": {
-						"type": "object",
-						"description": "Test Runner Workflows",
-						"default": {
-							"defaultWorkflow": {
-								"compile": false,
-								"publish": "alRapidPublish",
-								"test": "functionAtCursor",
-								"debug": false
-							}
-						},
-						"additionalProperties": {
-							"type": "object",
-							"properties": {
-								"compile": {
-									"type": "boolean",
-									"default": false,
-									"description": "Compile before running tests"
-								},
-								"publish": {
-									"type": "string",
-									"enum": [
-										"viaDevEndpoint",
-										"alPublish",
-										"alRapidPublish"
-									],
-									"default": null,
-									"description": "Publish before running tests"
-								},
-								"test": {
-									"type": "string",
-									"enum": [
-										"all",
-										"activeDocument",
-										"functionAtCursor"
-									],
-									"default": "functionAtCursor",
-									"description": "Test scope"
-								},
-								"debug": {
-									"type": "boolean",
-									"default": false,
-									"description": "Run in debug mode"
-								}
-							}
-						}
-					}
-				}
-			}
-		],
-		"snippets": [
-			{
-				"path": "snippets.json",
-				"language": "al"
-			}
-		],
-		"jsonValidation": [
-			{
-				"fileMatch": ".npaltestrunner/config.json",
-				"url": "./syntaxes/configSyntax.json"
-			}
-		]
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile",
-		"test": "node ./out/test/runTest.js"
-	},
-	"devDependencies": {
-		"@types/glob": "^7.1.4",
-		"@types/mocha": "^5.2.6",
-		"@types/node": "^17.00.00",
-		"@types/sinon": "^7.5.2",
-		"@types/vscode": "^1.89.0",
-		"glob": "^7.1.7",
-		"mocha": "^10.2.0",
-		"sinon": "^7.5.0",
-		"tslint": "^5.20.1",
-		"typescript": "^4.6.3"
-	},
-	"dependencies": {
-		"@types/node-fetch": "^2.6.11",
-		"@types/semver": "^7.5.8",
-		"@types/xml2js": "^0.4.9",
-		"@vscode/extension-telemetry": "0.5.0",
-		"@xmldom/xmldom": "^0.9.8",
-		"async-mutex": "^0.5.0",
-		"axios": "^1.7.2",
-		"net": "^1.0.2",
-		"node-fetch": "^2.7.0",
-		"sanitize-filename": "^1.6.3",
-		"semver": "^7.6.2",
-		"vscode-jsonrpc": "^8.2.1",
-		"xml2js": "^0.5.0"
-	},
-	"__metadata": {
-		"id": "81e06a9c-e97a-4474-b24e-a1f1c2683fe4",
-		"publisherDisplayName": "NaviPartner",
-		"publisherId": "NaviPartner",
-		"isPreReleaseVersion": true,
-		"preRelease": true
-	}
+  "name": "np-al-test-runner",
+  "displayName": "NaviPartner AL Test Runner",
+  "description": "NaviPartner test runner for AL tests for Business Central development",
+  "publisher": "NaviPartner",
+  "bugs": {
+    "email": "jakubv@navipartner.dk",
+    "url": "https://github.com/navipartner/np-test-runner/issues"
+  },
+  "homepage": "https://navipartner.com/",
+  "preview": true,
+  "repository": {
+    "url": "https://github.com/navipartner/np-test-runner"
+  },
+  "icon": "np-al-test-runner-icon.jpg",
+  "files": [
+    ".bin/**"
+  ],
+  "version": "0.31.4",
+  "engines": {
+    "vscode": ">=1.89.0"
+  },
+  "categories": [
+    "Testing"
+  ],
+  "keywords": [
+    "AL",
+    "Dynamics 365 Business Central",
+    "Test Runner",
+    "Tests"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "galleryBanner": {
+    "color": "#0060A0",
+    "theme": "light"
+  },
+  "pricing": "Free",
+  "activationEvents": [
+    "workspaceContains:.npaltestrunner",
+    "onLanguage:al"
+  ],
+  "extensionDependencies": [
+    "ms-dynamics-smb.al"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "menus": {
+      "editor/context": [
+        {
+          "when": "editorLangId == al",
+          "command": "npaltestrunner.showTableData",
+          "group": "NP AL Test Runner"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "npaltestrunner.runAllTests",
+        "title": "Run All Tests",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.runTestsCodeunit",
+        "title": "Run Tests in Current Codeunit",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.runTest",
+        "title": "Run Current Test",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.debugTest",
+        "title": "Debug Current Test",
+        "category": "NP AL Test Runner",
+        "enablement": "false"
+      },
+      {
+        "command": "npaltestrunner.debugTestsCodeunit",
+        "title": "Debug Tests in Current Codeunit",
+        "category": "NP AL Test Runner",
+        "enablement": "false"
+      },
+      {
+        "command": "npaltestrunner.clearTestResults",
+        "title": "Clear Test Results",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.openConfigFile",
+        "title": "Open Config File",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.toggleCodeCoverage",
+        "title": "Toggle Code Coverage",
+        "category": "NP AL Test Runner",
+        "enablement": "false"
+      },
+      {
+        "command": "npaltestrunner.showTableData",
+        "title": "Show Table Data",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.showRelatedTests",
+        "title": "Show Related Tests",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.listALFiles",
+        "title": "List AL Files",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.showPerformanceProfile",
+        "title": "Show Performance Profile",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.downloadClientSessionLibraries",
+        "title": "Download BC Client Session libraries",
+        "category": "NP AL Test Runner"
+      },
+      {
+        "command": "npaltestrunner.runSelectedWorkflow",
+        "title": "Run Default Test Workflow",
+        "category": "NP AL Test Runner"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "npaltestrunner.runTest",
+        "key": "Ctrl+Alt+T"
+      },
+      {
+        "command": "npaltestrunner.runAllTests",
+        "key": "Ctrl+Alt+Shift+T"
+      },
+      {
+        "command": "npaltestrunner.debugTest",
+        "key": "Ctrl+Alt+D",
+        "when": "false"
+      },
+      {
+        "command": "npaltestrunner.toggleCodeCoverage",
+        "key": "Ctrl+Alt+C",
+        "when": "false"
+      },
+      {
+        "command": "npaltestrunner.runSelectedWorkflow",
+        "key": "Ctrl+Alt+W"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "NaviPartner AL Test Runner",
+        "properties": {
+          "np-al-test-runner.decorateTestMethods": {
+            "type": "boolean",
+            "scope": "resource",
+            "default": true,
+            "description": "Decorate test methods with test results. When this setting is enabled the AL Test Runner extension will decorate the names of test methods in test codeunits according to the result of running that test."
+          },
+          "np-al-test-runner.passingTestsColor": {
+            "type": "object",
+            "description": "Background color for passing tests (rgba format)",
+            "scope": "resource",
+            "default": {
+              "red": 0,
+              "green": 255,
+              "blue": 0,
+              "alpha": 0.3
+            },
+            "properties": {
+              "red": {
+                "type": "number",
+                "description": "Red element of the color (0-255)"
+              },
+              "green": {
+                "type": "number",
+                "description": "Green element of the color (0-255)"
+              },
+              "blue": {
+                "type": "number",
+                "description": "Blue element of the color (0-255)"
+              },
+              "alpha": {
+                "type": "number",
+                "description": "Alpha (between 0 for transparent and 1 for opaque)"
+              }
+            }
+          },
+          "np-al-test-runner.failingTestsColor": {
+            "type": "object",
+            "description": "Background color for failing tests (rgba format)",
+            "scope": "resource",
+            "default": {
+              "red": 255,
+              "green": 0,
+              "blue": 0,
+              "alpha": 0.3
+            },
+            "properties": {
+              "red": {
+                "type": "number",
+                "description": "Red element of the color (0-255)"
+              },
+              "green": {
+                "type": "number",
+                "description": "Green element of the color (0-255)"
+              },
+              "blue": {
+                "type": "number",
+                "description": "Blue element of the color (0-255)"
+              },
+              "alpha": {
+                "type": "number",
+                "description": "Alpha (between 0 for transparent and 1 for opaque)"
+              }
+            }
+          },
+          "np-al-test-runner.untestedTestsColor": {
+            "type": "object",
+            "description": "Background color for untested tests (rgba format)",
+            "scope": "resource",
+            "default": {
+              "red": 250,
+              "green": 196,
+              "blue": 0,
+              "alpha": 0.3
+            },
+            "properties": {
+              "red": {
+                "type": "number",
+                "description": "Red element of the color (0-255)"
+              },
+              "green": {
+                "type": "number",
+                "description": "Green element of the color (0-255)"
+              },
+              "blue": {
+                "type": "number",
+                "description": "Blue element of the color (0-255)"
+              },
+              "alpha": {
+                "type": "number",
+                "description": "Alpha (between 0 for transparent and 1 for opaque)"
+              }
+            }
+          },
+          "np-al-test-runner.highlightFailingLine": {
+            "type": "boolean",
+            "scope": "resource",
+            "description": "Highlight the line in the test method that has failed",
+            "default": true
+          },
+          "np-al-test-runner.failingLineDecoration": {
+            "type": "string",
+            "scope": "resource",
+            "description": "TextDecoration CSS to decorate failing lines with",
+            "default": "underline wavy red"
+          },
+          "np-al-test-runner.enableCodeLens": {
+            "type": "boolean",
+            "scope": "resource",
+            "description": "Enables CodeLens actions to run individual tests or all tests in a codeunit",
+            "default": true
+          },
+          "np-al-test-runner.codeCoveragePath": {
+            "type": "string",
+            "scope": "resource",
+            "description": "The path to the JSON file which has details of the code coverage for this project",
+            "default": "./.npaltestrunner/codecoverage.json"
+          },
+          "np-al-test-runner.codeCoverageExcludeFiles": {
+            "type": "string",
+            "scope": "resource",
+            "description": "A regex pattern which defines file paths to exclude from the code coverage summary e.g. use it to exclude test objects"
+          },
+          "np-al-test-runner.enableCodeCoverage": {
+            "type": "boolean",
+            "scope": "resource",
+            "description": "Outputs code coverage statistics with test results and decorates covered lines with the Toggle Code Coverage command. See also the Code Coverage Path extension setting and key in the AL Test Runner config.json file.",
+            "default": false,
+            "anyOf": [
+              false
+            ]
+          },
+          "np-al-test-runner.testFolderName": {
+            "type": "string",
+            "scope": "resource",
+            "description": "The name of the workspace folder that contains the test app. Please reload VS Code after changing this setting."
+          },
+          "np-al-test-runner.testOutputLocation": {
+            "enum": [
+              "Output",
+              "Editor"
+            ],
+            "scope": "resource",
+            "description": "Determines where test results will be displayed",
+            "default": "Output"
+          },
+          "np-al-test-runner.testWorkspaceFolderIdentifiers": {
+            "type": "array",
+            "scope": "resource",
+            "description": "Text to look for in workspace folder names to identify the folder which contains the test app",
+            "default": [
+              "tests",
+              "test"
+            ]
+          },
+          "np-al-test-runner.selectedWorkflow": {
+            "type": "string",
+            "scope": "resource",
+            "default": "defaultWorkflow"
+          },
+          "np-al-test-runner.workflows": {
+            "type": "object",
+            "description": "Test Runner Workflows",
+            "default": {
+              "defaultWorkflow": {
+                "compile": false,
+                "publish": "alRapidPublish",
+                "test": "functionAtCursor",
+                "debug": false
+              }
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "compile": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Compile before running tests"
+                },
+                "publish": {
+                  "type": "string",
+                  "enum": [
+                    "viaDevEndpoint",
+                    "alPublish",
+                    "alRapidPublish"
+                  ],
+                  "default": null,
+                  "description": "Publish before running tests"
+                },
+                "test": {
+                  "type": "string",
+                  "enum": [
+                    "all",
+                    "activeDocument",
+                    "functionAtCursor"
+                  ],
+                  "default": "functionAtCursor",
+                  "description": "Test scope"
+                },
+                "debug": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Run in debug mode"
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "snippets": [
+      {
+        "path": "snippets.json",
+        "language": "al"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": ".npaltestrunner/config.json",
+        "url": "./syntaxes/configSyntax.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.1.4",
+    "@types/mocha": "^5.2.6",
+    "@types/node": "^17.00.00",
+    "@types/sinon": "^7.5.2",
+    "@types/vscode": "^1.89.0",
+    "glob": "^7.1.7",
+    "mocha": "^10.2.0",
+    "sinon": "^7.5.0",
+    "tslint": "^5.20.1",
+    "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "@types/node-fetch": "^2.6.11",
+    "@types/semver": "^7.5.8",
+    "@types/xml2js": "^0.4.9",
+    "@vscode/extension-telemetry": "0.5.0",
+    "@xmldom/xmldom": "^0.9.8",
+    "async-mutex": "^0.5.0",
+    "axios": "^1.7.2",
+    "net": "^1.0.2",
+    "node-fetch": "^2.7.0",
+    "sanitize-filename": "^1.6.3",
+    "semver": "^7.6.2",
+    "vscode-jsonrpc": "^8.2.1",
+    "xml2js": "^0.5.0"
+  },
+  "__metadata": {
+    "id": "81e06a9c-e97a-4474-b24e-a1f1c2683fe4",
+    "publisherDisplayName": "NaviPartner",
+    "publisherId": "NaviPartner",
+    "isPreReleaseVersion": true,
+    "preRelease": true
+  }
 }
