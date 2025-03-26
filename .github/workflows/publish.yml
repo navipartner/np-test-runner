@@ -100,11 +100,15 @@ jobs:
         shell: pwsh
 
       - name: Create Git tag
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag -a "v${{ steps.semver.outputs.new_version }}" -m "Release v${{ steps.semver.outputs.new_version }}"
-          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "v${{ steps.semver.outputs.new_version }}"
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/v${{ steps.semver.outputs.new_version }}',
+              sha: context.sha
+            })
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.3.1
