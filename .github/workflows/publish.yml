@@ -58,6 +58,8 @@ jobs:
           } elseif ("${{ github.event.inputs.version_increment }}" -eq "major") {
             $newVersion = $(semver -i major $baseVersion)
           }
+
+          $packageVersion = $newVersion
           
           if (!$isBranchMain -or $prerelease -ne "") {
             # For non-main branches, use branch name if no prerelease provided
@@ -70,7 +72,7 @@ jobs:
           }
           
           $package = Get-Content -Raw -Path package.json | ConvertFrom-Json
-          $package.version = $newVersion
+          $package.version = $packageVersion
           $package | ConvertTo-Json -Depth 100 | Set-Content package.json
           
           echo "::set-output name=new_version::$newVersion"
