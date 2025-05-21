@@ -97,7 +97,7 @@ export async function showSimpleQuickPick(items: string[], placeholderText?: str
     });
 }
 
-async function showArtifactVersionQuickPick(initialVersions: string[] | null): Promise<string | undefined> {
+async function showArtifactVersionQuickPick(initialVersions: string[] | null, artifactSource: types.BcArtifactSource): Promise<string | undefined> {
     const quickPick = vscode.window.createQuickPick();
     if (initialVersions) {
         quickPick.items = initialVersions.map(version => ({ label: version }));
@@ -124,7 +124,7 @@ async function showArtifactVersionQuickPick(initialVersions: string[] | null): P
                 if (locallyFilteredItems.length > 0) {
                     quickPick.items = locallyFilteredItems;
                 } else {
-                    await updateVersionPicker(quickPick, value);
+                    await updateVersionPicker(quickPick, value, artifactSource);
                 }
             } else if (value.length === 0) {
                 if (initialVersions) {
@@ -150,8 +150,9 @@ async function showArtifactVersionQuickPick(initialVersions: string[] | null): P
     });
 }
 
-async function updateVersionPicker(versionPicker: vscode.QuickPick<vscode.QuickPickItem>, filter: string): Promise<void> {
-    let fetchedVersions = await fetchVersions(`https://bcartifacts.blob.core.windows.net/onprem/`, filter);
+async function updateVersionPicker(versionPicker: vscode.QuickPick<vscode.QuickPickItem>, filter: string, artifactSource: types.BcArtifactSource): Promise<void> {
+    const baseUrl = getBcArtifactsUrl(artifactSource, types.BcArtifactSourceEndpoint.BLOB);
+    let fetchedVersions = await fetchVersions(baseUrl, filter);
     versionPicker.items = fetchedVersions.map(version => ({ label: version }));
 }
 
@@ -230,7 +231,7 @@ export async function downloadClientSessionLibraries(initialVersionString?: stri
         if (!sourceChoiceStr) { return; }
         artifactSource = types.BcArtifactSource[sourceChoiceStr as keyof typeof types.BcArtifactSource];
 
-        const pickedBaseVersion = await showArtifactVersionQuickPick(null);
+        const pickedBaseVersion = await showArtifactVersionQuickPick(null, artifactSource);
         if (!pickedBaseVersion) { return; }
         versionForDownloadAndConfig = pickedBaseVersion;
     } else {
