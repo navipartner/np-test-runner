@@ -445,12 +445,16 @@ export function getExtension() {
 	return vscode.extensions.getExtension('navipartner.np-al-test-runner');
 }
 
-export function writeToOutputChannel(value: string) {
+export function writeToOutputChannel(value: string, isError?: boolean) {
 	if (!debugChannel) {
 		debugChannel = vscode.window.createOutputChannel(getOutputChannel());
 	}
 
 	debugChannel.appendLine(value);
+
+	if (isError) {
+		console.error(value);
+	}
 }
 
 export function getOutputChannel() {
