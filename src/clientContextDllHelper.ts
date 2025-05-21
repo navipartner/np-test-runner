@@ -259,6 +259,12 @@ export async function downloadClientSessionLibraries(initialVersionString?: stri
         extractionFilter: "(?i)Applications\\\\testframework\\\\TestRunner\\\\Internal\\\\.*\\.dll$"
     };
 
+    if (artifactSource === types.BcArtifactSource.Sandbox) {
+        ext.writeToOutputChannel(`[Sandbox Download] Attempting to download from URL: ${downloadParams.url}`, true);
+        ext.writeToOutputChannel(`[Sandbox Download] Destination path: ${downloadParams.destinationPath}`, true);
+        ext.writeToOutputChannel(`[Sandbox Download] Extraction filter: ${downloadParams.extractionFilter}`, true);
+    }
+
     try {
         await testRunnerClient.downloadFilesFromRemoteZipParams(downloadParams, `Downloading Client Session libraries for ${versionForDownloadAndConfig}`);
         if (!isWindowsPlatform()) {
@@ -287,6 +293,6 @@ function restoreDownloadedFileNames(folderPath: string): void {
             }
         }
     } catch (error) {
-        ext.writeToOutputChannel(`'An error occurred during file restore: ${error}`);
+        ext.writeToOutputChannel(`'An error occurred during file restore: ${error}`, true);
     }
 }
