@@ -599,15 +599,60 @@ function showMissingPrerequisiteErrorMessage(message: string, link: string) {
 }
 
 async function startTestRunnerWebApiServerClient(context: vscode.ExtensionContext) {
-	if ((testRunnerSrv) && (testRunnerSrv.IsRunning)) {
-		return;
-	}
+    if (testRunnerSrv && testRunnerSrv.IsRunning) {
+        writeToOutputChannel('Test Runner WebAPI Server is already running and appears healthy.', false);
+        if (testRunnerClient && testRunnerClient.Port === testRunnerSrv.port) {
+            writeToOutputChannel('Test Runner WebAPI Client is also already configured for the running server.', false);
+            return;
+        }
+        writeToOutputChannel('Server is running, but client needs initialization or reconfiguration.', false);
+    }
 
-	testRunnerSrv = new webApiSrv.TestRunnerWebApiServer();
-	await testRunnerSrv.startServer(context);
+    if (!testRunnerSrv || !testRunnerSrv.IsRunning) {
+        writeToOutputChannel('Initializing a new Test Runner WebAPI Server instance.', false);
+        testRunnerSrv = new webApiSrv.TestRunnerWebApiServer();
+    }
 
-	testRunnerClient = new webApiClient.TestRunnerWebApiClient();
-	await testRunnerClient.Connect(testRunnerSrv.port);
+    let serverStartedSuccessfully = false;
+    if (!testRunnerSrv.IsRunning) {
+        writeToOutputChannel('Attempting to start Test Runner WebAPI Server...', false);
+        serverStartedSuccessfully = await testRunnerSrv.startServer(context);
+    } else {
+        serverStartedSuccessfully = true;
+        writeToOutputChannel('Test Runner WebAPI Server was already started.', false);
+    }
+
+    if (!serverStartedSuccessfully || !testRunnerSrv.IsRunning || testRunnerSrv.port === 0) {
+        const errorMessage = 'Failed to start or confirm the Test Runner WebAPI Server is running. Please check the output channel "np-al-test-runner-output" for details.';
+        
+		writeToOutputChannel(errorMessage, true);
+        vscode.window.showErrorMessage(errorMessage);
+        testRunnerClient = null;
+
+        if (testRunnerSrv) 
+			await testRunnerSrv.stopServer();
+
+		// Server not started!!!
+        return;
+    }
+
+    writeToOutputChannel(`Test Runner WebAPI Server is active on port ${testRunnerSrv.port}. Initializing client...`, false);
+    try {
+        if (!testRunnerClient || testRunnerClient.Port !== testRunnerSrv.port) {
+            testRunnerClient = new webApiClient.TestRunnerWebApiClient();
+            await testRunnerClient.Connect(testRunnerSrv.port);
+            writeToOutputChannel('Test Runner WebAPI Client connected successfully.', false);
+        } else {
+            writeToOutputChannel('Test Runner WebAPI Client was already connected to the correct port.', false);
+        }
+    } catch (error: any) {
+        const clientErrorMessage = `Failed to connect the Test Runner WebAPI Client to server on port ${testRunnerSrv.port}: ${error.message || String(error)}`;
+        writeToOutputChannel(clientErrorMessage, true);
+        vscode.window.showErrorMessage(clientErrorMessage);
+        testRunnerClient = null;
+
+        await testRunnerSrv.stopServer();
+    }
 }
 
 export function isWindowsPlatform(): boolean {
