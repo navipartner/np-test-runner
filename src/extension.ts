@@ -638,7 +638,6 @@ async function startTestRunnerWebApiServerClient(context: vscode.ExtensionContex
 
     writeToOutputChannel(`Test Runner WebAPI Server is active on port ${testRunnerSrv.port}. Initializing client...`, false);
     try {
-        // Initialize or re-initialize the client
         if (!testRunnerClient || testRunnerClient.Port !== testRunnerSrv.port) {
             testRunnerClient = new webApiClient.TestRunnerWebApiClient();
             await testRunnerClient.Connect(testRunnerSrv.port);
@@ -646,22 +645,13 @@ async function startTestRunnerWebApiServerClient(context: vscode.ExtensionContex
         } else {
             writeToOutputChannel('Test Runner WebAPI Client was already connected to the correct port.', false);
         }
-
-        // Optional: Perform a PING/Health check via client to confirm end-to-end communication
-        // Example:
-        // const isHealthy = await testRunnerClient.pingServer(); // Assuming a pingServer() method
-        // if (!isHealthy) {
-        //     throw new Error("Client connected, but server reported an unhealthy state or did not respond to ping.");
-        // }
-        // writeToOutputChannel('Server responded to client ping successfully.', false);
-
     } catch (error: any) {
         const clientErrorMessage = `Failed to connect the Test Runner WebAPI Client to server on port ${testRunnerSrv.port}: ${error.message || String(error)}`;
         writeToOutputChannel(clientErrorMessage, true);
         vscode.window.showErrorMessage(clientErrorMessage);
-        testRunnerClient = null; // Ensure client is null on connection failure
-        // Optionally, consider stopping the server as client connection failed
-        // await testRunnerSrv.stopServer();
+        testRunnerClient = null;
+
+        await testRunnerSrv.stopServer();
     }
 }
 
