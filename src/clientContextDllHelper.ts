@@ -18,7 +18,7 @@ async function fetchVersions(sourceBaseUrl: string, filter?: string): Promise<st
 			ext.writeToOutputChannel(`Failed to fetch versions from ${requestUrl}: ${response.statusText}`, true);
             return [];
         }
-        const jsonData: Array<{ Version: string, [key: string]: any }> = await response.json();
+        const jsonData: Array<{ Version: string, [key: string]: any }> = await response.json() as Array<{ Version: string, [key: string]: any }>;
         if (!Array.isArray(jsonData)) {
             ext.writeToOutputChannel(`Invalid JSON structure from ${requestUrl}: Expected an array.`, true);
             return [];
@@ -28,38 +28,26 @@ async function fetchVersions(sourceBaseUrl: string, filter?: string): Promise<st
             versions = versions.filter(v => v.startsWith(filter));
         }
         return versions;
-    } catch (error) {
-        ext.writeToOutputChannel(`Error fetching or parsing versions from ${requestUrl}: ${error}`, true);
+    } catch (error: any) {
+        ext.writeToOutputChannel(`Error fetching or parsing versions from ${requestUrl}: ${error.message || String(error)}`, true);
         return [];
     }
 }
 
-async function findArtifactVersionInOneOfTheSources(versionWithOptionalCountry: string): Promise<types.BcArtifactSource> {
-    let sources: Array<types.BcArtifactSource> = [
-        types.BcArtifactSource.OnPrem,
-        types.BcArtifactSource.Sandbox,
-        types.BcArtifactSource.Insider
-    ];
-
+async function validateOnPremArtifactVersion(versionWithOptionalCountry: string): Promise<boolean> {
     const baseVersion = versionWithOptionalCountry.split('/')[0];
+    // Ensure we always use OnPrem source for validation
+    const onPremSourceUrl = getBcArtifactsUrl(types.BcArtifactSource.OnPrem, types.BcArtifactSourceEndpoint.CDN);
+    const versionsFound = await fetchVersions(onPremSourceUrl, baseVersion);
 
-    let validSources: Array<types.BcArtifactSource> = [];
-    await Promise.all(sources.map(async (source) => {
-        const sourceUrl = getBcArtifactsUrl(source, types.BcArtifactSourceEndpoint.CDN);
-        const result = await fetchVersions(sourceUrl, baseVersion);
-        if (result && result.length > 0) {
-            validSources.push(source);
-        }
-    }));
-
-    return new Promise((resolve, reject) => {
-        if (validSources.length > 0) {
-            resolve(validSources[0]);
-        } else {
-            reject(`No Business Central artifacts found for version ${versionWithOptionalCountry} (checked for base version ${baseVersion} in available sources).`);
-        }
-    });
+    // Check if the exact version (with country) or the base version exists in the fetched list
+    if (versionsFound && versionsFound.some(v => v === versionWithOptionalCountry || (v === baseVersion && !versionWithOptionalCountry.includes('/')))) {
+        return true;
+    } else {
+        throw new Error(`No OnPrem Business Central artifacts found for version ${versionWithOptionalCountry} (checked for base version ${baseVersion}).`);
+    }
 }
+
 
 export async function selectBcVersionIfNotSelected(): Promise<boolean> {
     let selectedBcVersion = getALTestRunnerConfigKeyValue('selectedBcVersion');
@@ -67,7 +55,7 @@ export async function selectBcVersionIfNotSelected(): Promise<boolean> {
         return true;
     }
 
-    await downloadClientSessionLibraries();
+    await downloadClientSessionLibraries(); 
 
     selectedBcVersion = getALTestRunnerConfigKeyValue('selectedBcVersion');
     return !!(selectedBcVersion && selectedBcVersion.trim() !== '');
@@ -89,7 +77,7 @@ export async function showSimpleQuickPick(items: string[], placeholderText?: str
         });
 
         quickPick.onDidHide(() => {
-            resolve(undefined);
+            resolve(undefined); // Resolve with undefined if hidden without selection
             quickPick.dispose();
         });
 
@@ -97,12 +85,13 @@ export async function showSimpleQuickPick(items: string[], placeholderText?: str
     });
 }
 
+// This function will now only be called with artifactSource = OnPrem
 async function showArtifactVersionQuickPick(initialVersions: string[] | null, artifactSource: types.BcArtifactSource): Promise<string | undefined> {
     const quickPick = vscode.window.createQuickPick();
     if (initialVersions) {
         quickPick.items = initialVersions.map(version => ({ label: version }));
     }
-    quickPick.placeholder = 'Type BC [major.minor] to filter versions...';
+    quickPick.placeholder = 'Type BC version [major.minor] (at least 3 chars) to start loading and filtering ...';
 
     return new Promise<string | undefined>((resolve) => {
         quickPick.onDidChangeSelection(selection => {
@@ -157,58 +146,27 @@ async function updateVersionPicker(versionPicker: vscode.QuickPick<vscode.QuickP
 }
 
 export function getBcArtifactsUrl(artifactsSource: types.BcArtifactSource, artifactsSourceEndpoint: types.BcArtifactSourceEndpoint) : string {
-	let unknownEndpoint = false;
-    switch (artifactsSource) {
-        case types.BcArtifactSource.OnPrem:
-            switch (artifactsSourceEndpoint) {
-                case types.BcArtifactSourceEndpoint.BLOB:
-                    return 'https://bcartifacts.blob.core.windows.net/onprem/';
-                case types.BcArtifactSourceEndpoint.CDN:
-                    return 'https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/onprem/';
-				default:
-					unknownEndpoint = true;
-					break;
-            }
-            break;
-        case types.BcArtifactSource.Sandbox:
-            switch (artifactsSourceEndpoint) {
-                case types.BcArtifactSourceEndpoint.BLOB:
-                    return 'https://bcartifacts.blob.core.windows.net/sandbox/';
-                case types.BcArtifactSourceEndpoint.CDN:
-                    return 'https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/sandbox/';
-				default:
-					unknownEndpoint = true;
-					break;
-            }
-            break;
-        case types.BcArtifactSource.Insider:
-            switch (artifactsSourceEndpoint) {
-                case types.BcArtifactSourceEndpoint.BLOB:
-                    return 'https://bcinsider.blob.core.windows.net/sandbox/';
-                case types.BcArtifactSourceEndpoint.CDN:
-                    return 'https://bcinsider-fvh2ekdjecfjd6gk.b02.azurefd.net/sandbox/';
-				default:
-					unknownEndpoint = true;
-					break;
-            }
-            break;
-        default:
-            throw new Error(`Not supported artifact source type: ${artifactsSource}`);
+    if (artifactsSource !== types.BcArtifactSource.OnPrem) {
+        throw new Error(`Unsupported artifact source type: ${artifactsSource}. Only OnPrem is currently supported.`);
     }
 
-	if (unknownEndpoint) {
-		throw new Error(`Not supported artifact source endpoint type: ${artifactsSourceEndpoint}`);
-	}
-    return '';
+    switch (artifactsSourceEndpoint) {
+        case types.BcArtifactSourceEndpoint.BLOB:
+            return 'https://bcartifacts.blob.core.windows.net/onprem/';
+        case types.BcArtifactSourceEndpoint.CDN:
+            return 'https://bcartifacts-exdbf9fwegejdqak.b02.azurefd.net/onprem/';
+        default:
+            throw new Error(`Not supported artifact source endpoint type: ${artifactsSourceEndpoint} for OnPrem source.`);
+    }
 }
 
 export function getLibrariesFolder(version: string): string {
-	const extPath = getExtension().extensionPath;
+	const extPath = getExtension()!.extensionPath;
 	const libFolderPath = path.join(extPath, '.npaltestrunner', cslibFolderName, version);
 	return libFolderPath;
 }
 
-export async function checkAndDownloadMissingDlls(version: string) {	
+export async function checkAndDownloadMissingDlls(version: string) {
 	const libFolderPath = getLibrariesFolder(version);
 	if (fs.existsSync(libFolderPath) && fs.readdirSync(libFolderPath).length > 0) {
 		return;
@@ -219,38 +177,37 @@ export async function checkAndDownloadMissingDlls(version: string) {
 export async function downloadClientSessionLibraries(initialVersionString?: string) {
     const isVersionInitiallyProvided = !!(initialVersionString && initialVersionString.trim().length > 0);
     let versionForDownloadAndConfig: string | undefined = initialVersionString;
-
-    let artifactSource: types.BcArtifactSource;
+    const artifactSource: types.BcArtifactSource = types.BcArtifactSource.OnPrem;
 
     if (!isVersionInitiallyProvided) {
-        const sourceChoiceStr = await showSimpleQuickPick(
-            [types.BcArtifactSource.OnPrem, types.BcArtifactSource.Sandbox, types.BcArtifactSource.Insider].map(s => String(s)),
-            'Select the source for Business Central artifacts:'
-        );
-
-        if (!sourceChoiceStr) { return; }
-        artifactSource = types.BcArtifactSource[sourceChoiceStr as keyof typeof types.BcArtifactSource];
-
+        ext.writeToOutputChannel("No initial version provided. Prompting for OnPrem artifact version.", false);
         const pickedBaseVersion = await showArtifactVersionQuickPick(null, artifactSource);
-        if (!pickedBaseVersion) { return; }
+        if (!pickedBaseVersion) { 
+            ext.writeToOutputChannel("User did not select an OnPrem version.", false);
+            return;
+        }
         versionForDownloadAndConfig = pickedBaseVersion;
+        ext.writeToOutputChannel(`User selected OnPrem version: ${versionForDownloadAndConfig}`, false);
     } else {
         try {
-            artifactSource = await findArtifactVersionInOneOfTheSources(versionForDownloadAndConfig!);
+            ext.writeToOutputChannel(`Initial version provided: ${versionForDownloadAndConfig}. Validating against OnPrem artifacts...`, false);
+            await validateOnPremArtifactVersion(versionForDownloadAndConfig!); 
+            ext.writeToOutputChannel(`Version ${versionForDownloadAndConfig} is valid for OnPrem.`, false);
         } catch (error: any) {
-            // Failed to find a valid source for the provided version:
-            vscode.window.showErrorMessage(error.message || String(error));
+            const errorMessage = error.message || String(error);
+            ext.writeToOutputChannel(`Error validating provided OnPrem version ${versionForDownloadAndConfig}: ${errorMessage}`, true);
+            vscode.window.showErrorMessage(errorMessage);
             return;
         }
     }
 
-    // If we still don't have a version string, let's exit:
     if (!versionForDownloadAndConfig) {
-        ext.writeToOutputChannel("No version selected or determined for download.");
+        ext.writeToOutputChannel("No OnPrem version selected or determined for download. Aborting library download.", true);
         return;
     }
 
-    const artifactSourceCdnUrl = getBcArtifactsUrl(artifactSource, types.BcArtifactSourceEndpoint.CDN);
+    ext.writeToOutputChannel(`Proceeding to download libraries for OnPrem version: ${versionForDownloadAndConfig}`, false);
+    const artifactSourceCdnUrl = getBcArtifactsUrl(artifactSource, types.BcArtifactSourceEndpoint.CDN); 
     const destinationPath = getLibrariesFolder(versionForDownloadAndConfig);
 
     const downloadParams: webApiClient.DownloadFilesFromRemoteZipParams = {
@@ -258,21 +215,23 @@ export async function downloadClientSessionLibraries(initialVersionString?: stri
         destinationPath: destinationPath,
         extractionFilter: "(?i)Applications\\\\testframework\\\\TestRunner\\\\Internal\\\\.*\\.dll$"
     };
-
-    if (artifactSource === types.BcArtifactSource.Sandbox) {
-        ext.writeToOutputChannel(`[Sandbox Download] Attempting to download from URL: ${downloadParams.url}`, true);
-        ext.writeToOutputChannel(`[Sandbox Download] Destination path: ${downloadParams.destinationPath}`, true);
-        ext.writeToOutputChannel(`[Sandbox Download] Extraction filter: ${downloadParams.extractionFilter}`, true);
-    }
+    
+    ext.writeToOutputChannel(`[OnPrem Download] Attempting to download from URL: ${downloadParams.url}`, false);
+    ext.writeToOutputChannel(`[OnPrem Download] Destination path: ${downloadParams.destinationPath}`, false);
+    ext.writeToOutputChannel(`[OnPrem Download] Extraction filter: ${downloadParams.extractionFilter}`, false);
 
     try {
-        await testRunnerClient.downloadFilesFromRemoteZipParams(downloadParams, `Downloading Client Session libraries for ${versionForDownloadAndConfig}`);
+        await testRunnerClient.downloadFilesFromRemoteZipParams(downloadParams, `Downloading Client Session libraries for OnPrem ${versionForDownloadAndConfig}`);
         if (!isWindowsPlatform()) {
             restoreDownloadedFileNames(destinationPath);
         }
         setALTestRunnerConfig('selectedBcVersion', versionForDownloadAndConfig);
+        ext.writeToOutputChannel(`Successfully downloaded and configured OnPrem version ${versionForDownloadAndConfig}.`, false);
+        vscode.window.showInformationMessage(`Successfully downloaded Client Session libraries for OnPrem version ${versionForDownloadAndConfig}.`);
     } catch (error: any) {
-        vscode.window.showErrorMessage(`Failed to download libraries for ${versionForDownloadAndConfig}: ${error.message || String(error)}`);
+        const downloadErrorMessage = `Failed to download libraries for OnPrem ${versionForDownloadAndConfig}: ${error.message || String(error)}`;
+        ext.writeToOutputChannel(downloadErrorMessage, true);
+        vscode.window.showErrorMessage(downloadErrorMessage);
     }
 }
 
@@ -288,11 +247,11 @@ function restoreDownloadedFileNames(folderPath: string): void {
                     const newPath = path.join(folderPath, newName);
                     fs.copyFileSync(filePath, newPath);
                     fs.unlinkSync(filePath);
-                    ext.writeToOutputChannel(`Renamed: ${file} -> ${newName}`);
+                    ext.writeToOutputChannel(`Restored/Renamed: ${file} -> ${newName}`);
                 }
             }
         }
-    } catch (error) {
-        ext.writeToOutputChannel(`'An error occurred during file restore: ${error}`, true);
+    } catch (error: any) {
+        ext.writeToOutputChannel(`An error occurred during file name restoration: ${error.message || String(error)}`, true);
     }
 }
